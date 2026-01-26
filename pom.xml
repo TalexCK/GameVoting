@@ -55,6 +55,10 @@
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>cloudnet-repo</id>
+            <url>https://repo.cloudnetservice.eu/repository/releases/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -62,6 +66,18 @@
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.20.1-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>eu.cloudnetservice.cloudnet</groupId>
+            <artifactId>driver</artifactId>
+            <version>4.0.0-RC10</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>eu.cloudnetservice.cloudnet</groupId>
+            <artifactId>bridge</artifactId>
+            <version>4.0.0-RC10</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
