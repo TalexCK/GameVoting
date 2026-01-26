@@ -1,0 +1,3 @@
+# CloudNet v4 configuration
+# Note: This plugin uses CloudNet Driver API which automatically connects
+# No manual configuration needed - it will use the CloudNet service environment
