@@ -1,0 +1,69 @@
+name: Manual Build & Release
+
+# 纯手动触发，不监听任何代码推送
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (例如: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+        type: string
+      # 增加一个选项，防止手滑覆盖已有版本
+      force_update:
+        description: '如果版本已存在，是否强制更新？'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  manual-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # --- 关键步骤：版本号注入 ---
+      # 你的 pom.xml 可能还写着 1.0-SNAPSHOT。
+      # 如果这里不改，你发布的 Release 是 v1.0.0，但里面的 jar 包名却是 xxx-1.0-SNAPSHOT.jar。
+      # 这种“表里不一”非常业余。此步骤会临时修改 pom.xml 版本以匹配你的输入。
+      - name: Update Maven Version
+        run: |
+          # 提取输入版本，去掉可能存在的 'v' 前缀 (Maven 版本号通常不带 v)
+          NEW_VERSION=$(echo "${{ github.event.inputs.version }}" | sed 's/^v//')
+          echo "Setting pom.xml version to $NEW_VERSION"
+          
+          # 使用 Maven 专门的版本管理插件修改版本，不提交代码，只影响本次构建
+          mvn versions:set -DnewVersion=$NEW_VERSION -DgenerateBackupPoms=false
+
+      - name: Build with Maven
+        run: mvn -B package -DskipTests --file pom.xml
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          # 使用手动输入的版本号作为 Release 的 Tag
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          
+          # 自动匹配 target 下生成的新 jar 包
+          files: target/*.jar
+          
+          generate_release_notes: true
+          
+          # 如果之前已经发过这个版本，根据 checkbox 决定是否覆盖
+          fail_on_unmatched_files: true
+          target_commitish: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
