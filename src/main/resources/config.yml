@@ -1,3 +1,62 @@
-# CloudNet v4 configuration
-# Note: This plugin uses CloudNet Driver API which automatically connects
-# No manual configuration needed - it will use the CloudNet service environment
+# GameVoting configuration file
+
+# Debug mode for utility classes (shows detailed logging)
+debug: false
+
+# Language configuration
+# Supported languages: en-US, zh-CN, en-UK
+language: "en-US"
+
+# CloudNet proxy service name for player teleportation
+# This is the name of your proxy service (e.g., Proxy-1, Proxy-2)
+# Used for teleporting players: /cloud service <proxy-name> command send <player> <target>
+proxy-service-name: "Proxy-1"
+
+# Database configuration
+# Supported types: postgresql, mysql, mongodb, none
+database:
+  enabled: false
+  type: "postgresql"  # Options: postgresql, mysql, mongodb
+  host: "localhost"
+  port: 5432  # Default ports: PostgreSQL=5432, MySQL=3306, MongoDB=27017
+  database: "gamevoting"
+  username: "postgres"
+  password: "password"
+
+# Example configurations for different database types:
+#
+# PostgreSQL:
+# database:
+#   type: "postgresql"
+#   host: "localhost"
+#   port: 5432
+#   database: "gamevoting"
+#   username: "postgres"
+#   password: "password"
+#
+# MySQL:
+# database:
+#   type: "mysql"
+#   host: "localhost"
+#   port: 3306
+#   database: "gamevoting"
+#   username: "root"
+#   password: "password"
+#
+# MongoDB:
+# database:
+#   type: "mongodb"
+#   host: "localhost"
+#   port: 27017
+#   database: "gamevoting"
+#   username: ""  # Optional for MongoDB
+#   password: ""  # Optional for MongoDB
+
+# Hologram display locations
+# Created via /vote holograms create command
+# Format: world:x:y:z
+holograms:
+  locations: []
+  # Example:
+  # - "world:0:64:0"
+  # - "world_nether:100:50:200"

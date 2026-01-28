@@ -22,36 +22,14 @@
 
 ### 对接方式
 
-本插件使用 **CloudNet Driver API**（推荐方式），而不是 REST API。
+本插件使用 **CloudNet Driver API**。
 
 ### 优势
 
-- ✅ 原生 CloudNet 集成，无需 REST 认证
+- ✅ 原生 CloudNet 集成
 - ✅ 更高的性能和稳定性
 - ✅ 自动依赖注入，无需手动配置连接
 - ✅ 支持所有 CloudNet 功能（服务、任务、组）
-
-### API 使用示例
-
-```java
-// 获取所有服务
-Collection<ServiceInfoSnapshot> services = CloudNetAPI.getInstance().getServices();
-
-// 按任务筛选服务
-Collection<ServiceInfoSnapshot> lobbies = CloudNetAPI.getInstance().getServicesByTask("Lobby");
-
-// 创建新服务
-CloudNetAPI.getInstance().createService("Lobby").thenAccept(result -> {
-    System.out.println("Service created: " + result.serviceInfo().name());
-});
-
-// 获取所有任务
-Collection<ServiceTask> tasks = CloudNetAPI.getInstance().getTasks();
-
-// 管理服务
-CloudNetAPI.getInstance().startService("Lobby-1");
-CloudNetAPI.getInstance().stopService("Lobby-1");
-```
 
 ## 安装
 
@@ -59,7 +37,7 @@ CloudNetAPI.getInstance().stopService("Lobby-1");
 2. 将插件 JAR 文件放入 `plugins/` 目录
 3. 重启服务器
 
-**重要**: 此插件必须在 CloudNet 服务上运行，不能在独立的 Spigot 服务器上使用。
+**重要**: 此插件必须在 CloudNet 服务上运行，不能也不推荐在独立的 Spigot 服务器上使用。
 
 ## 构建
 
@@ -67,7 +45,7 @@ CloudNetAPI.getInstance().stopService("Lobby-1");
 mvn clean package
 ```
 
-编译后的 JAR 文件位于 `target/GameVoting-1.0.0.jar`
+编译后的 JAR 文件位于 `target/`
 
 ## 配置
 

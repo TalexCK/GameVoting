@@ -1,0 +1,119 @@
+# English (United Kingdom) language file
+
+# Voting messages
+voting:
+  not_active: "&cVoting is not currently active!"
+  not_active_wait: "&7Wait for an admin to start voting with &e/vote start"
+  already_active: "&cVoting is already active!"
+  no_permission_start: "&cYou don't have permission to start voting!"
+  no_permission_stop: "&cYou don't have permission to stop voting!"
+  started: "&a&lVoting has started! &7Use your vote item to participate."
+  ended: "&e&lVoting has ended!"
+  winner: "&a&lWinning game: &e{game}"
+  time_left: "&eTime remaining: &a{time} seconds"
+  already_voted: "&cYou have already voted for this game!"
+  vote_recorded: "&aYour vote has been recorded for &e{game}&a!"
+  no_votes_cast: "&cNo votes were cast! Voting session cancelled."
+  winner_not_found: "&cWinning game not found! Voting session cancelled."
+  start_header: "&e&l             VOTING HAS STARTED!"
+  start_instructions_1: "&7Vote for your favourite games using &e/vote"
+  start_instructions_2: "&7You can vote for &e1-3 games &7or skip voting"
+  start_instructions_3: "&7{count} games available to vote for!"
+  start_instructions_4: "&7Voting will end in &e{time} minute(s)"
+  end_header: "&e&l             VOTING HAS ENDED!"
+  results_header: "&e&lResults:"
+  no_results: "&7No votes were cast."
+  total_votes: "&7Total votes: &e{count}"
+
+# Ready system
+ready:
+  not_active: "&cReady phase is not currently active!"
+  already_ready: "&cYou are already ready!"
+  marked_ready: "&aYou are now ready!"
+  marked_unready: "&cYou are no longer ready!"
+  player_ready: "&e{player} &ais ready! &7({count}/{total})"
+  player_unready: "&e{player} &cis no longer ready! &7({count}/{total})"
+  all_ready: "&a&lAll players are ready! Starting game..."
+  countdown_cancelled: "&c&lCountdown cancelled! Waiting for all players to ready up..."
+  header: "&a&l⏱ GET READY!"
+  winner_label: "&7Winner: {game}"
+  instructions_1: "&7Right-click your ready item or use &e/vote ready"
+  instructions_2: "&7Game will start when everyone is ready!"
+  instructions_3: "&7Vote starter can use &e/vote gamestart &7to force start"
+
+# Game start
+game:
+  starting: "&a&l              GAME STARTING!"
+  game_label: "&7Game: {game}"
+  started_by_player: "&7Force started by: &e{player}"
+  started_by_ready: "&7Started by: &aAll players ready!"
+  no_winner: "&cNo winning game found!"
+  config_not_found: "&cWinning game configuration not found!"
+  only_starter_can_force: "&cOnly the player who started the vote can force start!"
+  no_cloudnet_task: "&cGame {game} &chas no CloudNet task configured!"
+  creating_service: "&a&l✓ Starting {game} server..."
+  teleporting_in: "&7Teleporting in 60 seconds"
+  service_creation_failed: "&cFailed to start game server! Check console for details."
+
+# Teleport
+teleport:
+  countdown_yellow: "&eTeleporting to &e&l{game} &ein &e&l{time}s"
+  countdown_gold: "&6Teleporting to &6&l{game} &6in &6&l{time}s"
+  countdown_red: "&c&lTeleporting in {time}s"
+  teleporting_now: "&a&lTeleporting to {game}..."
+  commands_failed: "&cSome teleport commands failed. Please contact an administrator."
+
+# Join command
+join:
+  no_game: "&cNo game is currently running!"
+  teleporting: "&aTeleporting you to the game server..."
+  failed: "&cAn error occurred while teleporting. Please contact an administrator."
+
+# Commands
+command:
+  no_permission: "&cYou don't have permission to use this command"
+  only_players: "&cOnly players can use this command (except /vote gamestart)."
+  usage: "&cUsage: /vote [start|stop|forcestart|ready|gamestart|holograms|session|reload|join]"
+  invalid_time: "&cInvalid time value. Please provide a number in seconds."
+  invalid_duration: "&cInvalid duration! Usage: /vote start <time:min>"
+  duration_must_positive: "&cDuration must be positive!"
+  session_started: "&aVoting session started for {time} seconds!"
+  session_stopped: "&cVoting session stopped and results discarded."
+  no_active_session: "&cNo active voting session to stop!"
+  no_games_configured: "&cNo games are configured! Add games to games.yml first."
+  game_not_found: "&cGame not found: {game}"
+  forcestart_usage: "&cUsage: /vote forcestart <game-id>"
+  holograms_usage: "&cUsage: /vote holograms <create|remove|list>"
+  session_usage: "&cUsage: /vote session <list|stop>"
+  reload_no_permission: "&cYou don't have permission to reload the plugin!"
+  reload_start: "&eReloading GameVoting plugin..."
+  reload_success: "&a&lPlugin reloaded successfully!"
+  reload_failed: "&cFailed to reload plugin! Check console for details."
+  reload_games: "&aReloaded games configuration (&e{count} games&a)"
+  reload_holograms: "&aReloaded hologram configuration (&e{count} locations&a)"
+  reload_language: "&aReloaded language files (&e{lang}&a)"
+
+# Holograms
+hologram:
+  created: "&aHologram created at location #{id}!"
+  removed: "&cHologram #{id} removed!"
+  invalid_id: "&cInvalid hologram ID. Valid range: 0-{max}"
+  no_holograms: "&cNo holograms have been created yet."
+  list_header: "&e&l▬▬▬▬▬▬▬ Holograms ▬▬▬▬▬▬▬"
+  list_entry: "&7#{id}: &e{location}"
+
+# Session history
+session:
+  list_header: "&e&l▬▬▬▬▬▬▬ Vote History (Page {page}/{total}) ▬▬▬▬▬▬▬"
+  list_entry: "&7{time} - Winner: &e{game} &7({votes} votes)"
+  no_history: "&7No voting history available yet."
+  invalid_page: "&cInvalid page number."
+
+# Items
+item:
+  cannot_drop: "&cYou cannot drop this item!"
+
+# General
+general:
+  separator: "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  prefix: "&e[GameVoting] &r"

@@ -1,0 +1,119 @@
+# 简体中文语言文件
+
+# 投票消息
+voting:
+  not_active: "&c投票当前未激活！"
+  not_active_wait: "&7等待管理员使用 &e/vote start &7开始投票"
+  already_active: "&c投票已经在进行中！"
+  no_permission_start: "&c你没有权限开始投票！"
+  no_permission_stop: "&c你没有权限停止投票！"
+  started: "&a&l投票已开始！&7使用你的投票物品参与。"
+  ended: "&e&l投票已结束！"
+  winner: "&a&l获胜游戏：&e{game}"
+  time_left: "&e剩余时间：&a{time} 秒"
+  already_voted: "&c你已经投票给这个游戏了！"
+  vote_recorded: "&a你的投票已记录为 &e{game}&a！"
+  no_votes_cast: "&c没有玩家投票！投票会话已取消。"
+  winner_not_found: "&c未找到获胜游戏！投票会话已取消。"
+  start_header: "&e&l             投票已开始！"
+  start_instructions_1: "&7使用 &e/vote &7为你喜欢的游戏投票"
+  start_instructions_2: "&7你可以投票给 &e1-3 个游戏 &7或跳过投票"
+  start_instructions_3: "&7有 {count} 个游戏可供投票！"
+  start_instructions_4: "&7投票将在 &e{time} 分钟后结束"
+  end_header: "&e&l             投票已结束！"
+  results_header: "&e&l结果："
+  no_results: "&7没有玩家投票。"
+  total_votes: "&7总票数：&e{count}"
+  
+# 准备系统
+ready:
+  not_active: "&c准备阶段当前未激活！"
+  already_ready: "&c你已经准备好了！"
+  marked_ready: "&a你现在已准备好！"
+  marked_unready: "&c你取消了准备状态！"
+  player_ready: "&e{player} &a已准备！&7({count}/{total})"
+  player_unready: "&e{player} &c取消了准备！&7({count}/{total})"
+  all_ready: "&a&l所有玩家已准备好！开始游戏..."
+  countdown_cancelled: "&c&l倒计时已取消！等待所有玩家准备..."
+  header: "&a&l⏱ 准备好了吗！"
+  winner_label: "&7获胜者：{game}"
+  instructions_1: "&7右键点击你的准备物品或使用 &e/vote ready"
+  instructions_2: "&7当所有人都准备好后游戏将开始！"
+  instructions_3: "&7投票发起者可以使用 &e/vote gamestart &7强制开始"
+  
+# 游戏开始
+game:
+  starting: "&a&l              游戏开始！"
+  game_label: "&7游戏：{game}"
+  started_by_player: "&7强制启动者：&e{player}"
+  started_by_ready: "&7启动方式：&a所有玩家准备完毕！"
+  no_winner: "&c未找到获胜游戏！"
+  config_not_found: "&c未找到获胜游戏配置！"
+  only_starter_can_force: "&c只有发起投票的玩家可以强制开始！"
+  no_cloudnet_task: "&c游戏 {game} &c未配置 CloudNet 任务！"
+  creating_service: "&a&l✓ 正在启动 {game} 服务器..."
+  teleporting_in: "&7将在 60 秒后传送"
+  service_creation_failed: "&c启动游戏服务器失败！请查看控制台了解详情。"
+
+# 传送
+teleport:
+  countdown_yellow: "&e传送到 &e&l{game} &e还有 &e&l{time}秒"
+  countdown_gold: "&6传送到 &6&l{game} &6还有 &6&l{time}秒"
+  countdown_red: "&c&l{time}秒后传送"
+  teleporting_now: "&a&l正在传送到 {game}..."
+  commands_failed: "&c部分传送命令失败。请联系管理员。"
+
+# 加入命令
+join:
+  no_game: "&c当前没有游戏在运行！"
+  teleporting: "&a正在传送你到游戏服务器..."
+  failed: "&c传送时发生错误。请联系管理员。"
+  
+# 命令
+command:
+  no_permission: "&c你没有权限使用此命令"
+  only_players: "&c只有玩家可以使用此命令（除了 /vote gamestart）。"
+  usage: "&c用法：/vote [start|stop|forcestart|ready|gamestart|holograms|session|reload|join]"
+  invalid_time: "&c无效的时间值。请提供一个秒数。"
+  invalid_duration: "&c无效的持续时间！用法：/vote start <时间:分钟>"
+  duration_must_positive: "&c持续时间必须为正数！"
+  session_started: "&a投票会话已开始，持续 {time} 秒！"
+  session_stopped: "&c投票会话已停止，结果已丢弃。"
+  no_active_session: "&c没有活动的投票会话可以停止！"
+  no_games_configured: "&c未配置任何游戏！请先在 games.yml 中添加游戏。"
+  game_not_found: "&c未找到游戏：{game}"
+  forcestart_usage: "&c用法：/vote forcestart <游戏ID>"
+  holograms_usage: "&c用法：/vote holograms <create|remove|list>"
+  session_usage: "&c用法：/vote session <list|stop>"
+  reload_no_permission: "&c你没有权限重载插件！"
+  reload_start: "&e正在重载 GameVoting 插件..."
+  reload_success: "&a&l插件重载成功！"
+  reload_failed: "&c重载插件失败！请查看控制台了解详情。"
+  reload_games: "&a已重载游戏配置（&e{count} 个游戏&a）"
+  reload_holograms: "&a已重载全息图配置（&e{count} 个位置&a）"
+  reload_language: "&a已重载语言文件（&e{lang}&a）"
+  
+# 全息图
+hologram:
+  created: "&a全息图已在位置 #{id} 创建！"
+  removed: "&c全息图 #{id} 已移除！"
+  invalid_id: "&c无效的全息图 ID。有效范围：0-{max}"
+  no_holograms: "&c尚未创建任何全息图。"
+  list_header: "&e&l▬▬▬▬▬▬▬ 全息图 ▬▬▬▬▬▬▬"
+  list_entry: "&7#{id}：&e{location}"
+  
+# 会话历史
+session:
+  list_header: "&e&l▬▬▬▬▬▬▬ 投票历史（第 {page}/{total} 页）▬▬▬▬▬▬▬"
+  list_entry: "&7{time} - 获胜者：&e{game} &7({votes} 票)"
+  no_history: "&7暂无投票历史记录。"
+  invalid_page: "&c无效的页码。"
+  
+# 物品
+item:
+  cannot_drop: "&c你不能丢弃此物品！"
+  
+# 通用
+general:
+  separator: "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  prefix: "&e[游戏投票] &r"

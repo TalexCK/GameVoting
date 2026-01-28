@@ -79,16 +79,37 @@ public class CloudNetAPI {
     }
 
     /**
-     * Create a new service from a task
+     * Get a specific service by name
+     */
+    public Optional<ServiceInfoSnapshot> getServiceByName(String name) {
+        return serviceProvider.services().stream()
+            .filter(service -> service.name().equalsIgnoreCase(name))
+            .findFirst();
+    }
+
+    /**
+     * Create and start a single service from a task
+     * Equivalent to CloudNet command: create by <task_name> 1
+     * 
+     * @param taskName The name of the task
+     * @return The created service result
      */
     public ServiceCreateResult createService(String taskName) {
         ServiceTask task = taskProvider.serviceTask(taskName);
         if (task == null) {
             throw new IllegalArgumentException("Task not found: " + taskName);
         }
-        ServiceConfiguration config = ServiceConfiguration.builder()
-            .taskName(taskName)
-            .build();
+        
+        // Build service configuration based on the task
+        // This properly inherits all task settings including environment
+        ServiceConfiguration.Builder builder = ServiceConfiguration.builder(task);
+        
+        // Ensure auto-delete is enabled
+        builder.autoDeleteOnStop(true);
+        
+        ServiceConfiguration config = builder.build();
+        
+        // Create the service
         return serviceFactory.createCloudService(config);
     }
 
@@ -185,5 +206,21 @@ public class CloudNetAPI {
      */
     public boolean serviceExists(UUID uniqueId) {
         return serviceProvider.service(uniqueId) != null;
+    }
+    
+    /**
+     * Execute a command on a specific service.
+     * 
+     * @param serviceName The name of the service
+     * @param command The command to execute
+     */
+    public void executeServiceCommand(String serviceName, String command) {
+        Optional<ServiceInfoSnapshot> serviceOpt = getServiceByName(serviceName);
+        if (serviceOpt.isEmpty()) {
+            throw new IllegalArgumentException("Service not found: " + serviceName);
+        }
+        
+        UUID serviceId = serviceOpt.get().serviceId().uniqueId();
+        serviceProvider.serviceProvider(serviceId).runCommand(command);
     }
 }
