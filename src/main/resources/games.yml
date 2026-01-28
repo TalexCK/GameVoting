@@ -1,0 +1,21 @@
+# Game Voting Configuration
+# Define games that players can vote for
+
+games:
+  - id: "bedwars"
+    name: "&e&lBedWars"
+    description:
+      - "&7Classic bed defense game"
+      - "&7Protect your bed and destroy enemy beds"
+    material: "RED_BED"
+    custom-model-data: 0
+    cloudnet-task: "BedWars"
+
+  - id: "skywars"
+    name: "&b&lSkyWars"
+    description:
+      - "&7Battle on floating islands"
+      - "&7Last player standing wins"
+    material: "GRASS_BLOCK"
+    custom-model-data: 0
+    cloudnet-task: "SkyWars"
