@@ -31,6 +31,102 @@ public class VoteItem {
     }
 
     /**
+     * Give the insufficient players item to a player (red redstone block).
+     *
+     * @param player The player to give the item to
+     */
+    public static void giveInsufficientPlayersItem(Player player) {
+        ItemStack item = new ItemStack(Material.REDSTONE_BLOCK);
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&l✖ &4Insufficient Players"));
+            meta.setLore(Arrays.asList(
+                ChatColor.translateAlternateColorCodes('&', "&7Not enough players online"),
+                ChatColor.translateAlternateColorCodes('&', "&7"),
+                ChatColor.translateAlternateColorCodes('&', "&eRequires at least &66 players"),
+                ChatColor.translateAlternateColorCodes('&', "&eAdmin can use &6/vote start &eto begin")
+            ));
+
+            // Add glowing effect
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            // Mark as insufficient players item
+            meta.getPersistentDataContainer().set(VOTE_ITEM_KEY, PersistentDataType.STRING, "insufficient_players");
+
+            item.setItemMeta(meta);
+        }
+
+        // Place in slot 8 (9th slot)
+        player.getInventory().setItem(VOTE_ITEM_SLOT, item);
+    }
+    
+    /**
+     * Give the start voting trigger item to a player (green emerald).
+     *
+     * @param player The player to give the item to
+     */
+    public static void giveStartVotingItem(Player player) {
+        ItemStack item = new ItemStack(Material.EMERALD);
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&l✓ &2Start Voting"));
+            meta.setLore(Arrays.asList(
+                ChatColor.translateAlternateColorCodes('&', "&7Right-click to mark yourself ready"),
+                ChatColor.translateAlternateColorCodes('&', "&7"),
+                ChatColor.translateAlternateColorCodes('&', "&eVoting starts when all players are ready!")
+            ));
+
+            // Add glowing effect
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+            // Mark as start voting item
+            meta.getPersistentDataContainer().set(VOTE_ITEM_KEY, PersistentDataType.STRING, "start_voting");
+
+            item.setItemMeta(meta);
+        }
+
+        // Place in slot 8 (9th slot)
+        player.getInventory().setItem(VOTE_ITEM_SLOT, item);
+    }
+
+    /**
+     * Update the start voting item to show "already ready" state.
+     *
+     * @param player The player whose item to update
+     * @param isReady Whether the player is ready
+     */
+    public static void updateStartVotingItem(Player player, boolean isReady) {
+        ItemStack item;
+        ItemMeta meta;
+
+        if (isReady) {
+            item = new ItemStack(Material.GRAY_DYE);
+            meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&7&l✓ &8Ready to Start"));
+                meta.setLore(Arrays.asList(
+                    ChatColor.translateAlternateColorCodes('&', "&7You are ready!"),
+                    ChatColor.translateAlternateColorCodes('&', "&7"),
+                    ChatColor.translateAlternateColorCodes('&', "&7Waiting for other players...")
+                ));
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                meta.getPersistentDataContainer().set(VOTE_ITEM_KEY, PersistentDataType.STRING, "start_voting");
+                item.setItemMeta(meta);
+            }
+        } else {
+            // Give back the normal start voting item
+            giveStartVotingItem(player);
+            return;
+        }
+
+        player.getInventory().setItem(VOTE_ITEM_SLOT, item);
+    }
+    
+    /**
      * Give the voting item to a player (before voting starts).
      *
      * @param player The player to give the item to
@@ -67,11 +163,11 @@ public class VoteItem {
      * @param player The player to give the item to
      */
     public static void giveReadyItem(Player player) {
-        ItemStack item = new ItemStack(Material.LIME_DYE);
+        ItemStack item = new ItemStack(Material.GRAY_DYE);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&l✓ &2Ready Up"));
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&7&l✓ &8Ready Up"));
             meta.setLore(Arrays.asList(
                 ChatColor.translateAlternateColorCodes('&', "&7Right-click to mark yourself as ready"),
                 ChatColor.translateAlternateColorCodes('&', "&7"),
@@ -102,12 +198,12 @@ public class VoteItem {
         ItemMeta meta;
 
         if (isReady) {
-            item = new ItemStack(Material.GRAY_DYE);
+            item = new ItemStack(Material.LIME_DYE);
             meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&7&l✓ &8Already Ready"));
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&l✓ &2Already Ready"));
                 meta.setLore(Arrays.asList(
-                    ChatColor.translateAlternateColorCodes('&', "&7You are ready!"),
+                    ChatColor.translateAlternateColorCodes('&', "&aYou are ready!"),
                     ChatColor.translateAlternateColorCodes('&', "&7"),
                     ChatColor.translateAlternateColorCodes('&', "&7Waiting for other players...")
                 ));

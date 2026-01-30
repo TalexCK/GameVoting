@@ -1,10 +1,14 @@
 package com.talexck.gameVoting.voting;
 
 import com.talexck.gameVoting.utils.display.BossBarManager;
+import com.talexck.gameVoting.utils.language.LanguageManager;
 import net.kyori.adventure.bossbar.BossBar;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Task that displays countdown timer via boss bar during voting session.
@@ -49,7 +53,11 @@ public class VotingCountdownTask extends BukkitRunnable {
 
         // Format time display
         String timeStr = formatTime(remaining);
-        String title = "§e§lVoting ends in: §f" + timeStr;
+
+        // Get translated title with placeholder
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("time", timeStr);
+        String title = LanguageManager.getInstance().getMessage("voting.countdown_bossbar", placeholders);
 
         // Update boss bar for all online players
         BossBarManager manager = BossBarManager.getInstance();

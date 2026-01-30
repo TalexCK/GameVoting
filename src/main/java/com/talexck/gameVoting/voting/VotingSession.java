@@ -37,6 +37,12 @@ public class VotingSession {
     
     // Current game service (for /vote join)
     private String currentGameService;  // CloudNet service name of running game
+    
+    // Pre-voting ready phase (before voting starts)
+    private boolean preVotingReady;  // True when waiting for players to trigger voting
+    private final Set<UUID> preVotingReadyPlayers;  // Players who marked ready to start voting
+    private int requiredPlayers = 6;  // Minimum players required to start voting
+    private int pendingVotingDuration = 3;  // Duration to use when voting actually starts
 
     private VotingSession() {
         this.active = false;
@@ -54,6 +60,8 @@ public class VotingSession {
         this.countdownSeconds = 10;
         this.countdownActive = false;
         this.currentGameService = null;
+        this.preVotingReady = false;
+        this.preVotingReadyPlayers = new HashSet<>();
     }
 
     /**
@@ -359,6 +367,8 @@ public class VotingSession {
         // Stop countdown task
         stopCountdown();
         currentGameService = null;
+        preVotingReady = false;
+        preVotingReadyPlayers.clear();
     }
 
     // === Ready System Methods ===
@@ -563,6 +573,127 @@ public class VotingSession {
      */
     public boolean hasCurrentGame() {
         return currentGameService != null && !currentGameService.isEmpty();
+    }
+    
+    // === Pre-Voting Ready Phase Methods ===
+    
+    /**
+     * Start the pre-voting ready phase (waiting for players to trigger voting).
+     */
+    public void startPreVotingReady() {
+        this.preVotingReady = true;
+        this.preVotingReadyPlayers.clear();
+    }
+    
+    /**
+     * Check if currently in pre-voting ready phase.
+     *
+     * @return true if in pre-voting ready phase
+     */
+    public boolean isPreVotingReady() {
+        return preVotingReady;
+    }
+    
+    /**
+     * Mark a player as ready to start voting.
+     *
+     * @param playerId Player UUID
+     * @return true if player was marked ready (false if already ready)
+     */
+    public boolean markPreVotingReady(UUID playerId) {
+        if (!preVotingReady) {
+            return false;
+        }
+        return preVotingReadyPlayers.add(playerId);
+    }
+    
+    /**
+     * Check if a player is ready to start voting.
+     *
+     * @param playerId Player UUID
+     * @return true if player is ready
+     */
+    public boolean isPreVotingPlayerReady(UUID playerId) {
+        return preVotingReadyPlayers.contains(playerId);
+    }
+    
+    /**
+     * Get the number of players ready to start voting.
+     *
+     * @return Number of ready players
+     */
+    public int getPreVotingReadyCount() {
+        return preVotingReadyPlayers.size();
+    }
+    
+    /**
+     * Check if all online players are ready to start voting.
+     *
+     * @return true if all players are ready
+     */
+    public boolean allPlayersReadyToVote() {
+        if (!preVotingReady) {
+            return false;
+        }
+        int onlineCount = Bukkit.getOnlinePlayers().size();
+        return onlineCount >= requiredPlayers && preVotingReadyPlayers.size() >= onlineCount;
+    }
+    
+    /**
+     * Unmark a player as ready to start voting.
+     *
+     * @param playerId Player UUID
+     * @return true if player was unmarked (false if wasn't ready)
+     */
+    public boolean unmarkPreVotingReady(UUID playerId) {
+        if (!preVotingReady) {
+            return false;
+        }
+        return preVotingReadyPlayers.remove(playerId);
+    }
+    
+    /**
+     * End the pre-voting ready phase.
+     */
+    public void endPreVotingReady() {
+        this.preVotingReady = false;
+        this.preVotingReadyPlayers.clear();
+    }
+    
+    /**
+     * Get the required number of players to start voting.
+     *
+     * @return Required player count
+     */
+    public int getRequiredPlayers() {
+        return requiredPlayers;
+    }
+    
+    /**
+     * Set the required number of players to start voting.
+     *
+     * @param count Required player count
+     */
+    public void setRequiredPlayers(int count) {
+        this.requiredPlayers = count;
+    }
+    
+    /**
+     * Get the pending voting duration.
+     *
+     * @return Pending voting duration in minutes
+     */
+    public int getPendingVotingDuration() {
+        return pendingVotingDuration;
+    }
+    
+    /**
+     * Set the pending voting duration.
+     *
+     * @param duration Voting duration in minutes
+     */
+    public void setPendingVotingDuration(int duration) {
+        this.pendingVotingDuration = duration;
     }
 }
 

@@ -6,6 +6,7 @@ import com.talexck.gameVoting.config.GameConfig;
 import com.talexck.gameVoting.config.GamesConfigManager;
 import com.talexck.gameVoting.utils.database.DatabaseManager;
 import com.talexck.gameVoting.voting.VotingSession;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 import java.util.ArrayList;
@@ -22,10 +23,11 @@ public class HologramDisplayManager {
     private final GamesConfigManager gamesManager;
     
     public enum DisplayState {
-        NOT_VOTING,    // Show historical top 10 wins
-        VOTING_ACTIVE, // Show current game list
-        VOTE_ENDED,    // Show vote results with winner highlighted
-        GAME_STARTED   // Reset to NOT_VOTING after teleport
+        NOT_VOTING,         // Show historical top 10 wins
+        PRE_VOTING_READY,   // Show waiting for players to ready up
+        VOTING_ACTIVE,      // Show current game list
+        VOTE_ENDED,         // Show vote results with winner highlighted
+        GAME_STARTED        // Reset to NOT_VOTING after teleport
     }
 
     public HologramDisplayManager(GameVoting plugin) {
@@ -71,6 +73,9 @@ public class HologramDisplayManager {
         switch (state) {
             case NOT_VOTING:
                 lines.addAll(generateHistoricalTopGames());
+                break;
+            case PRE_VOTING_READY:
+                lines.addAll(generatePreVotingReady());
                 break;
             case VOTING_ACTIVE:
                 lines.addAll(generateVotingGameList());
@@ -131,6 +136,31 @@ public class HologramDisplayManager {
     }
 
     /**
+     * Generate hologram lines for pre-voting ready phase.
+     *
+     * @return List of text lines
+     */
+    private List<String> generatePreVotingReady() {
+        List<String> lines = new ArrayList<>();
+        
+        lines.add("&e&l═══════════════════");
+        lines.add("&6&lWAITING TO START");
+        lines.add("&e&l═══════════════════");
+        lines.add("");
+        
+        VotingSession session = VotingSession.getInstance();
+        int readyCount = session.getPreVotingReadyCount();
+        int totalPlayers = Bukkit.getOnlinePlayers().size();
+        
+        lines.add("&aReady: &e" + readyCount + "&7/&e" + totalPlayers);
+        lines.add("");
+        lines.add("&7Right-click the &aEmerald");
+        lines.add("&7in slot 9 to ready up!");
+        
+        return lines;
+    }
+
+    /**
      * Generate hologram lines for active voting game list.
      *
      * @return List of text lines
@@ -176,7 +206,13 @@ public class HologramDisplayManager {
             lines.add("&7No votes recorded");
         } else {
             int rank = 1;
+            int maxDisplay = 10; // Show top 10 only
+            
             for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+                if (rank > maxDisplay) {
+                    break; // Stop after top 10
+                }
+                
                 String gameId = entry.getKey();
                 int votes = entry.getValue();
                 

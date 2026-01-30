@@ -10,6 +10,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -27,7 +29,7 @@ public class PartyCommand implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                            @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cOnly players can use this command.");
+            sender.sendMessage(com.talexck.gameVoting.utils.language.LanguageManager.getInstance().getMessage("command.only_players"));
             return true;
         }
 
@@ -64,7 +66,7 @@ public class PartyCommand implements CommandExecutor {
             case "forcestart":
                 return handleForceStart(player, args, manager);
             default:
-                MessageUtil.sendMessage(player, "&cUsage: /party <create|invite|accept|decline|exit|list|transfer|vote|forcestart>");
+                MessageUtil.sendTranslated(player, "party.usage");
                 return true;
         }
     }
@@ -74,13 +76,13 @@ public class PartyCommand implements CommandExecutor {
      */
     private boolean handleCreate(Player player, PartyManager manager) {
         if (manager.hasParty(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cYou are already in a party!");
+            MessageUtil.sendTranslated(player, "party.already_in_party");
             return true;
         }
 
         Party party = manager.createParty(player.getUniqueId());
-        MessageUtil.sendMessage(player, "&aParty created! You are the leader.");
-        MessageUtil.sendMessage(player, "&7Use &e/party invite <player> &7to invite members.");
+        MessageUtil.sendTranslated(player, "party.created");
+        MessageUtil.sendTranslated(player, "party.invite_instructions");
         return true;
     }
 
@@ -89,54 +91,57 @@ public class PartyCommand implements CommandExecutor {
      */
     private boolean handleInvite(Player player, String[] args, PartyManager manager) {
         if (args.length < 2) {
-            MessageUtil.sendMessage(player, "&cUsage: /party invite <player>");
+            MessageUtil.sendTranslated(player, "party.invite_usage");
             return true;
         }
 
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party! Use &e/party create");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
         if (!party.isLeader(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cOnly the party leader can invite players!");
+            MessageUtil.sendTranslated(player, "party.not_leader_invite");
             return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            MessageUtil.sendMessage(player, "&cPlayer not found!");
+            MessageUtil.sendTranslated(player, "party.player_not_found");
             return true;
         }
 
         if (target.getUniqueId().equals(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cYou cannot invite yourself!");
+            MessageUtil.sendTranslated(player, "party.cannot_invite_self");
             return true;
         }
 
         if (manager.hasParty(target.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cThat player is already in a party!");
+            MessageUtil.sendTranslated(player, "party.target_already_in_party");
             return true;
         }
 
         if (!party.canInvite()) {
-            MessageUtil.sendMessage(player, "&cYour party is full!");
+            MessageUtil.sendTranslated(player, "party.party_full");
             return true;
         }
 
         if (manager.sendInvite(player.getUniqueId(), target.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&aInvitation sent to &e" + target.getName());
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", target.getName());
+            MessageUtil.sendTranslated(player, "party.invite_sent", placeholders);
 
             // Send invitation to target
-            MessageUtil.sendMessage(target, "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
-            MessageUtil.sendMessage(target, "&aYou've been invited to &e" + player.getName() + "'s &aparty!");
-            MessageUtil.sendMessage(target, "&7Accept: &e/party accept");
-            MessageUtil.sendMessage(target, "&7Decline: &e/party decline");
-            MessageUtil.sendMessage(target, "&7This invitation expires in 30 seconds.");
-            MessageUtil.sendMessage(target, "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+            placeholders.put("player", player.getName());
+            MessageUtil.sendTranslated(target, "party.invite_header");
+            MessageUtil.sendTranslated(target, "party.invite_message", placeholders);
+            MessageUtil.sendTranslated(target, "party.invite_accept");
+            MessageUtil.sendTranslated(target, "party.invite_decline");
+            MessageUtil.sendTranslated(target, "party.invite_expires");
+            MessageUtil.sendTranslated(target, "party.invite_footer");
         } else {
-            MessageUtil.sendMessage(player, "&cFailed to send invitation!");
+            MessageUtil.sendTranslated(player, "party.invite_failed");
         }
 
         return true;
@@ -147,19 +152,19 @@ public class PartyCommand implements CommandExecutor {
      */
     private boolean handleAccept(Player player, PartyManager manager) {
         if (manager.hasParty(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cYou are already in a party!");
+            MessageUtil.sendTranslated(player, "party.already_in_party");
             return true;
         }
 
         PartyInvite invite = manager.getPendingInvite(player.getUniqueId());
         if (invite == null) {
-            MessageUtil.sendMessage(player, "&cYou don't have any pending invitations!");
+            MessageUtil.sendTranslated(player, "party.no_pending_invite");
             return true;
         }
 
         if (invite.isExpired()) {
             manager.declineInvite(player.getUniqueId());
-            MessageUtil.sendMessage(player, "&cThat invitation has expired!");
+            MessageUtil.sendTranslated(player, "party.invite_expired");
             return true;
         }
 
@@ -167,17 +172,19 @@ public class PartyCommand implements CommandExecutor {
             Party party = manager.getPartyByPlayer(player.getUniqueId());
             Player leader = Bukkit.getPlayer(party.getLeaderId());
 
-            MessageUtil.sendMessage(player, "&aYou joined the party!");
+            MessageUtil.sendTranslated(player, "party.joined");
 
             // Notify all party members
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", player.getName());
             for (UUID memberId : party.getMembers()) {
                 Player member = Bukkit.getPlayer(memberId);
                 if (member != null && !member.getUniqueId().equals(player.getUniqueId())) {
-                    MessageUtil.sendMessage(member, "&e" + player.getName() + " &ajoined the party!");
+                    MessageUtil.sendTranslated(member, "party.player_joined", placeholders);
                 }
             }
         } else {
-            MessageUtil.sendMessage(player, "&cFailed to join party!");
+            MessageUtil.sendTranslated(player, "party.join_failed");
         }
 
         return true;
@@ -189,16 +196,18 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleDecline(Player player, PartyManager manager) {
         PartyInvite invite = manager.getPendingInvite(player.getUniqueId());
         if (invite == null) {
-            MessageUtil.sendMessage(player, "&cYou don't have any pending invitations!");
+            MessageUtil.sendTranslated(player, "party.no_pending_invite");
             return true;
         }
 
         manager.declineInvite(player.getUniqueId());
-        MessageUtil.sendMessage(player, "&cInvitation declined.");
+        MessageUtil.sendTranslated(player, "party.invite_declined");
 
         Player inviter = Bukkit.getPlayer(invite.getInviterId());
         if (inviter != null) {
-            MessageUtil.sendMessage(inviter, "&e" + player.getName() + " &cdeclined the party invitation.");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", player.getName());
+            MessageUtil.sendTranslated(inviter, "party.invite_declined_notify", placeholders);
         }
 
         return true;
@@ -210,22 +219,24 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleLeave(Player player, PartyManager manager) {
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party!");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
         boolean wasLeader = party.isLeader(player.getUniqueId());
         manager.leaveParty(player.getUniqueId());
 
-        MessageUtil.sendMessage(player, "&cYou left the party.");
+        MessageUtil.sendTranslated(player, "party.left");
 
         // Notify remaining members
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("player", player.getName());
         for (UUID memberId : party.getMembers()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
-                MessageUtil.sendMessage(member, "&e" + player.getName() + " &cleft the party.");
+                MessageUtil.sendTranslated(member, "party.player_left", placeholders);
                 if (wasLeader && party.isLeader(memberId)) {
-                    MessageUtil.sendMessage(member, "&aYou are now the party leader!");
+                    MessageUtil.sendTranslated(member, "party.now_leader");
                 }
             }
         }
@@ -239,12 +250,15 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleList(Player player, PartyManager manager) {
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party!");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
-        MessageUtil.sendMessage(player, "&e&l▬▬▬▬▬▬▬▬ Party Members ▬▬▬▬▬▬▬▬");
-        MessageUtil.sendMessage(player, "&7Total: &e" + party.getMembers().size() + "/" + party.getMaxMembers());
+        MessageUtil.sendTranslated(player, "party.list_header");
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("count", String.valueOf(party.getMembers().size()));
+        placeholders.put("max", String.valueOf(party.getMaxMembers()));
+        MessageUtil.sendTranslated(player, "party.list_total", placeholders);
         MessageUtil.sendMessage(player, "");
 
         for (UUID memberId : party.getMembers()) {
@@ -255,7 +269,7 @@ public class PartyCommand implements CommandExecutor {
             }
         }
 
-        MessageUtil.sendMessage(player, "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+        MessageUtil.sendTranslated(player, "party.invite_footer");
         return true;
     }
 
@@ -264,42 +278,44 @@ public class PartyCommand implements CommandExecutor {
      */
     private boolean handleTransfer(Player player, String[] args, PartyManager manager) {
         if (args.length < 2) {
-            MessageUtil.sendMessage(player, "&cUsage: /party transfer <player>");
+            MessageUtil.sendTranslated(player, "party.transfer_usage");
             return true;
         }
 
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party!");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
         if (!party.isLeader(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cOnly the party leader can transfer leadership!");
+            MessageUtil.sendTranslated(player, "party.not_leader_transfer");
             return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            MessageUtil.sendMessage(player, "&cPlayer not found!");
+            MessageUtil.sendTranslated(player, "party.player_not_found");
             return true;
         }
 
         if (!party.isMember(target.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cThat player is not in your party!");
+            MessageUtil.sendTranslated(player, "party.target_not_in_party");
             return true;
         }
 
         if (manager.transferLeadership(player.getUniqueId(), target.getUniqueId())) {
             // Notify all party members
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", target.getName());
             for (UUID memberId : party.getMembers()) {
                 Player member = Bukkit.getPlayer(memberId);
                 if (member != null) {
-                    MessageUtil.sendMessage(member, "&e" + target.getName() + " &ais now the party leader!");
+                    MessageUtil.sendTranslated(member, "party.leadership_transferred", placeholders);
                 }
             }
         } else {
-            MessageUtil.sendMessage(player, "&cFailed to transfer leadership!");
+            MessageUtil.sendTranslated(player, "party.transfer_failed");
         }
 
         return true;
@@ -311,12 +327,12 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleDisband(Player player, PartyManager manager) {
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party!");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
         if (!party.isLeader(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cOnly the party leader can disband the party!");
+            MessageUtil.sendTranslated(player, "party.not_leader_disband");
             return true;
         }
 
@@ -324,7 +340,7 @@ public class PartyCommand implements CommandExecutor {
         for (UUID memberId : party.getMembers()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
-                MessageUtil.sendMessage(member, "&cThe party has been disbanded.");
+                MessageUtil.sendTranslated(member, "party.disbanded");
             }
         }
 
@@ -338,17 +354,17 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleVote(Player player, String[] args, PartyManager manager) {
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party!");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
         if (!party.isLeader(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cOnly the party leader can start party voting!");
+            MessageUtil.sendTranslated(player, "party.not_leader_vote");
             return true;
         }
 
         // TODO: Implement party voting (Phase 2)
-        MessageUtil.sendMessage(player, "&aParty voting will be implemented soon!");
+        MessageUtil.sendTranslated(player, "party.vote_coming_soon");
         return true;
     }
 
@@ -358,17 +374,17 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleForceStart(Player player, String[] args, PartyManager manager) {
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&cYou are not in a party!");
+            MessageUtil.sendTranslated(player, "party.not_in_party");
             return true;
         }
 
         if (!party.isLeader(player.getUniqueId())) {
-            MessageUtil.sendMessage(player, "&cOnly the party leader can force start games!");
+            MessageUtil.sendTranslated(player, "party.not_leader_forcestart");
             return true;
         }
 
         // TODO: Implement force start (Phase 3)
-        MessageUtil.sendMessage(player, "&aForce start will be implemented soon!");
+        MessageUtil.sendTranslated(player, "party.forcestart_coming_soon");
         return true;
     }
 
@@ -378,11 +394,11 @@ public class PartyCommand implements CommandExecutor {
     private boolean handleInfo(Player player, PartyManager manager) {
         Party party = manager.getPartyByPlayer(player.getUniqueId());
         if (party == null) {
-            MessageUtil.sendMessage(player, "&e&l▬▬▬▬▬▬▬ Party Commands ▬▬▬▬▬▬▬");
-            MessageUtil.sendMessage(player, "&e/party create &7- Create a new party");
-            MessageUtil.sendMessage(player, "&e/party accept &7- Accept party invitation");
-            MessageUtil.sendMessage(player, "&e/party decline &7- Decline party invitation");
-            MessageUtil.sendMessage(player, "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
+            MessageUtil.sendTranslated(player, "party.help_header");
+            MessageUtil.sendTranslated(player, "party.help_create");
+            MessageUtil.sendTranslated(player, "party.help_accept");
+            MessageUtil.sendTranslated(player, "party.help_decline");
+            MessageUtil.sendTranslated(player, "party.help_footer");
         } else {
             return handleList(player, manager);
         }

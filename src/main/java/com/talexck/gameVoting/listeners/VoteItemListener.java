@@ -1,6 +1,7 @@
 package com.talexck.gameVoting.listeners;
 
 import com.talexck.gameVoting.GameVoting;
+import com.talexck.gameVoting.commands.VoteCommand;
 import com.talexck.gameVoting.ui.VotingUI;
 import com.talexck.gameVoting.utils.item.VoteItem;
 import com.talexck.gameVoting.utils.message.MessageUtil;
@@ -59,6 +60,66 @@ public class VoteItemListener implements Listener {
         VotingSession session = VotingSession.getInstance();
 
         switch (itemType) {
+            case "insufficient_players":
+                // Show insufficient players message
+                int currentPlayers = Bukkit.getOnlinePlayers().size();
+                com.talexck.gameVoting.utils.display.ActionBarUtil.sendActionBar(player,
+                    "&c&lInsufficient Players! &7(" + currentPlayers + "/6) &eAdmin can use &6/vote start");
+                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                break;
+                
+            case "start_voting":
+                // Handle pre-voting ready phase
+                // Check cooldown to prevent double-clicking
+                long currentTimeStart = System.currentTimeMillis();
+                Long lastClickTimeStart = readyCooldowns.get(player.getUniqueId());
+                
+                if (lastClickTimeStart != null && (currentTimeStart - lastClickTimeStart) < READY_COOLDOWN_MS) {
+                    return;
+                }
+                
+                readyCooldowns.put(player.getUniqueId(), currentTimeStart);
+                
+                if (session.isPreVotingReady()) {
+                    if (session.isPreVotingPlayerReady(player.getUniqueId())) {
+                        // Unready
+                        session.unmarkPreVotingReady(player.getUniqueId());
+                        VoteItem.updateStartVotingItem(player, false);
+                        
+                        int readyCount = session.getPreVotingReadyCount();
+                        int totalPlayers = Bukkit.getOnlinePlayers().size();
+                        
+                        MessageUtil.sendMessage(player, "&cYou are no longer ready to start voting!");
+                        MessageUtil.broadcast("&e" + player.getName() + " &cis no longer ready! &7(" + readyCount + "/" + totalPlayers + ")");
+                    } else {
+                        // Ready up
+                        session.markPreVotingReady(player.getUniqueId());
+                        VoteItem.updateStartVotingItem(player, true);
+                        
+                        int readyCount = session.getPreVotingReadyCount();
+                        int totalPlayers = Bukkit.getOnlinePlayers().size();
+                        
+                        MessageUtil.sendMessage(player, "&aYou are ready to start voting!");
+                        MessageUtil.broadcast("&e" + player.getName() + " &ais ready! &7(" + readyCount + "/" + totalPlayers + ")");
+                        
+                        // Check if all players are ready
+                        if (session.allPlayersReadyToVote()) {
+                            MessageUtil.broadcast("&a&lAll players are ready! Starting voting session...");
+                            
+                            // Actually start voting with stored duration
+                            Bukkit.getScheduler().runTask(GameVoting.getInstance(), () -> {
+                                GameVoting plugin = GameVoting.getInstance();
+                                VoteCommand voteCommand = new VoteCommand(plugin);
+                                voteCommand.setGamesManager(plugin.getGamesManager());
+                                voteCommand.actuallyStartVoting(session.getPendingVotingDuration());
+                            });
+                        }
+                    }
+                } else {
+                    MessageUtil.sendMessage(player, "&cPre-voting ready phase is not active!");
+                }
+                break;
+                
             case "vote":
                 // Open voting UI
                 if (session.isActive()) {

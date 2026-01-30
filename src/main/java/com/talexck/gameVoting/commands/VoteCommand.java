@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class VoteCommand implements CommandExecutor {
     private final GameVoting plugin;
@@ -65,7 +66,7 @@ public class VoteCommand implements CommandExecutor {
         
         // Check if sender is a player for all other commands
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cOnly players can use this command (except /vote gamestart).");
+            sender.sendMessage(com.talexck.gameVoting.utils.language.LanguageManager.getInstance().getMessage("command.only_players"));
             return true;
         }
 
@@ -123,6 +124,49 @@ public class VoteCommand implements CommandExecutor {
     }
 
     /**
+     * Actually start the voting session (called from pre-voting ready phase).
+     * This is a public method so it can be called from VoteItemListener.
+     *
+     * @param duration Voting duration in minutes
+     */
+    public void actuallyStartVoting(int duration) {
+        VotingSession session = VotingSession.getInstance();
+        
+        // End pre-voting ready phase
+        session.endPreVotingReady();
+        
+        // Start the voting session with timer and callback
+        session.startVoting(duration, plugin, () -> {
+            // This runs when voting ends automatically
+            handleVotingEnd();
+        });
+
+        // Give vote item to all online players
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            com.talexck.gameVoting.utils.item.VoteItem.giveVotingItem(online);
+        }
+
+        // Broadcast to all players
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("count", String.valueOf(gamesManager.getGameCount()));
+        placeholders.put("time", String.valueOf(duration));
+        
+        MessageUtil.broadcastTranslated("general.separator");
+        MessageUtil.broadcast("");
+        MessageUtil.broadcastTranslated("voting.start_header");
+        MessageUtil.broadcast("");
+        MessageUtil.broadcastTranslated("voting.start_instructions_1");
+        MessageUtil.broadcastTranslated("voting.start_instructions_2");
+        MessageUtil.broadcastTranslated("voting.start_instructions_3", placeholders);
+        MessageUtil.broadcastTranslated("voting.start_instructions_4", placeholders);
+        MessageUtil.broadcast("");
+        MessageUtil.broadcastTranslated("general.separator");
+        
+        // Update holograms to show voting active
+        updateHologramDisplays();
+    }
+    
+    /**
      * Handle /vote start [time] (start voting session).
      *
      * @param player The player
@@ -138,8 +182,8 @@ public class VoteCommand implements CommandExecutor {
 
         VotingSession session = VotingSession.getInstance();
 
-        // Check if already active
-        if (session.isActive()) {
+        // Check if already active or in pre-voting ready phase
+        if (session.isActive() || session.isPreVotingReady()) {
             MessageUtil.sendTranslated(player, "voting.already_active");
             return true;
         }
@@ -165,17 +209,19 @@ public class VoteCommand implements CommandExecutor {
             }
         }
 
-        // Set vote starter (can force start game)
-        session.setVoteStarter(player.getUniqueId());
-
-        // Start the voting session with timer and callback
+        // Store duration for later use
         final int finalDuration = duration;
-        session.startVoting(duration, plugin, () -> {
+        
+        // Always start voting directly when /vote start is executed
+        session.setVoteStarter(player.getUniqueId());
+        
+        // Start the voting session with timer and callback
+        session.startVoting(finalDuration, plugin, () -> {
             // This runs when voting ends automatically
             handleVotingEnd();
         });
 
-        // Give vote item to all online players
+        // Give vote item (compass) to all online players
         for (Player online : Bukkit.getOnlinePlayers()) {
             com.talexck.gameVoting.utils.item.VoteItem.giveVotingItem(online);
         }
@@ -195,6 +241,9 @@ public class VoteCommand implements CommandExecutor {
         MessageUtil.broadcastTranslated("voting.start_instructions_4", placeholders);
         MessageUtil.broadcast("");
         MessageUtil.broadcastTranslated("general.separator");
+        
+        // Update holograms to show voting active
+        updateHologramDisplays();
 
         return true;
     }
@@ -298,6 +347,9 @@ public class VoteCommand implements CommandExecutor {
 
         // Start ready phase instead of immediately starting game
         session.startReadyPhase();
+        
+        // Update holograms to show vote results
+        updateHologramDisplays();
 
         // Give ready items to all players
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -500,10 +552,17 @@ public class VoteCommand implements CommandExecutor {
         String proxyService = plugin.getConfig().getString("proxy-service-name", "Proxy-1");
         
         CloudNetAPI api = CloudNetAPI.getInstance();
+        VotingSession session = VotingSession.getInstance();
         int successCount = 0;
         int failCount = 0;
         
         for (Player player : Bukkit.getOnlinePlayers()) {
+            // Only teleport players who actually voted
+            if (!session.hasVoted(player)) {
+                plugin.getLogger().info("Skipping teleport for " + player.getName() + " - did not vote");
+                continue;
+            }
+            
             try {
                 // Execute "send <player> <server>" command on proxy service
                 String command = "send " + player.getName() + " " + serviceName;
@@ -527,6 +586,12 @@ public class VoteCommand implements CommandExecutor {
         
         // Store service name in voting session for /vote join
         VotingSession.getInstance().setCurrentGameService(serviceName);
+        
+        // Schedule hologram update to show historical wins after a short delay
+        // This allows players time to be teleported before hologram changes
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            updateHologramDisplays();
+        }, 20L); // 1 second delay
     }
 
     /**
@@ -649,6 +714,9 @@ public class VoteCommand implements CommandExecutor {
         for (Player online : Bukkit.getOnlinePlayers()) {
             com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
         }
+        
+        // Save vote results to database before clearing session
+        saveVoteResultToDatabase(session, winner);
 
         // Start the game
         startGame(winner, initiator);
@@ -978,6 +1046,49 @@ public class VoteCommand implements CommandExecutor {
     }
 
     /**
+     * Save vote result to database after game starts.
+     *
+     * @param session The voting session
+     * @param winner The winning game config
+     */
+    private void saveVoteResultToDatabase(VotingSession session, GameConfig winner) {
+        var dbManager = com.talexck.gameVoting.utils.database.DatabaseManager.getInstance();
+        
+        if (dbManager == null || !dbManager.hasVoteHistoryRepository()) {
+            plugin.getLogger().warning("Database not available - vote result not saved");
+            return;
+        }
+        
+        try {
+            var repository = dbManager.getVoteHistoryRepository();
+            
+            // Build vote history record
+            var voteHistory = new com.talexck.gameVoting.voting.VoteHistory.Builder()
+                .sessionId(UUID.randomUUID())
+                .timestamp(java.time.Instant.now())
+                .winningGameId(winner.getId())
+                .winningGameName(winner.getName())
+                .totalVotes(session.getTotalVoteCount())
+                .playerCount(Bukkit.getOnlinePlayers().size())
+                .voteDetails(new HashMap<>(session.getVoteCounts()))
+                .build();
+            
+            // Save to database asynchronously
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                boolean success = repository.saveSession(voteHistory);
+                if (success) {
+                    plugin.getLogger().info("Saved vote result to database: " + winner.getName() + " won with " + session.getTotalVoteCount() + " votes");
+                } else {
+                    plugin.getLogger().warning("Failed to save vote result to database");
+                }
+            });
+        } catch (Exception e) {
+            plugin.getLogger().severe("Exception saving vote result to database: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
      * Update all hologram displays based on current voting state.
      */
     private void updateHologramDisplays() {
@@ -992,7 +1103,9 @@ public class VoteCommand implements CommandExecutor {
         VotingSession session = VotingSession.getInstance();
         var state = com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.NOT_VOTING;
         
-        if (session.isActive()) {
+        if (session.isPreVotingReady()) {
+            state = com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.PRE_VOTING_READY;
+        } else if (session.isActive()) {
             state = com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.VOTING_ACTIVE;
         } else if (session.isReadyPhase()) {
             state = com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.VOTE_ENDED;

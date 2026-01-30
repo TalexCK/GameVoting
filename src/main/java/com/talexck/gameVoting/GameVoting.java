@@ -10,7 +10,9 @@ import com.talexck.gameVoting.utils.display.BossBarManager;
 import com.talexck.gameVoting.utils.gui.ChestUIListener;
 import com.talexck.gameVoting.utils.hologram.HologramManager;
 import eu.cloudnetservice.driver.service.ServiceInfoSnapshot;
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class GameVoting extends JavaPlugin {
@@ -106,6 +108,14 @@ public final class GameVoting extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new com.talexck.gameVoting.listeners.VoteItemListener(), this);
         getLogger().info("VoteItemListener registered");
 
+        // Register PlayerJoin listener
+        getServer().getPluginManager().registerEvents(new com.talexck.gameVoting.listeners.PlayerJoinListener(), this);
+        getLogger().info("PlayerJoinListener registered");
+
+        // Register VotingPlayerQuit listener
+        getServer().getPluginManager().registerEvents(new com.talexck.gameVoting.listeners.VotingPlayerQuitListener(), this);
+        getLogger().info("VotingPlayerQuitListener registered");
+
         // Initialize HologramManager (only if DecentHolograms is present)
         if (getServer().getPluginManager().getPlugin("DecentHolograms") != null) {
             HologramManager.initialize(this);
@@ -149,6 +159,23 @@ public final class GameVoting extends JavaPlugin {
         // Register party listener
         getServer().getPluginManager().registerEvents(new PartyQuitListener(), this);
         getLogger().info("Party system initialized");
+
+        // Give appropriate item to all online players on startup
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            int onlineCount = Bukkit.getOnlinePlayers().size();
+            if (onlineCount > 0) {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (onlineCount >= 6) {
+                        // Give green emerald for ready system
+                        com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(player);
+                    } else {
+                        // Give redstone block for insufficient players
+                        com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(player);
+                    }
+                }
+                getLogger().info("Given startup items to " + onlineCount + " players");
+            }
+        }, 20L); // Delay 1 second to ensure all players are loaded
 
         getLogger().info("GameVoting plugin enabled!");
     }
