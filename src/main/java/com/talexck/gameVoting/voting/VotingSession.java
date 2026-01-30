@@ -493,9 +493,12 @@ public class VotingSession {
             }
 
             // Display action bar to all online players
+            var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+            java.util.Map<String, String> placeholders = new java.util.HashMap<>();
+            placeholders.put("seconds", String.valueOf(countdownSeconds));
             for (Player player : Bukkit.getOnlinePlayers()) {
                 com.talexck.gameVoting.utils.display.ActionBarUtil.sendActionBar(player,
-                    "&a&lGame starting in &e&l" + countdownSeconds + "&a&l seconds...");
+                    langManager.getMessage("game.countdown_actionbar", placeholders));
             }
 
             countdownSeconds--;

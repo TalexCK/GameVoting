@@ -18,11 +18,16 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
 
 public class VoteCommand implements CommandExecutor {
     private final GameVoting plugin;
     private GamesConfigManager gamesManager;
     private static final int DEFAULT_VOTING_DURATION = 3; // 3 minutes
+    
+    // Store players who voted, for teleportation after session is cleared
+    private Set<UUID> playersToTeleport = new HashSet<>();
 
     public VoteCommand(GameVoting plugin) {
         this.plugin = plugin;
@@ -272,6 +277,18 @@ public class VoteCommand implements CommandExecutor {
         // Stop voting manually (won't trigger auto-start)
         Map<String, Integer> results = session.stopVoting();
         broadcastResults(results);
+
+        // Give appropriate items based on player count (replace compass with redstone block/emerald)
+        int onlineCount = Bukkit.getOnlinePlayers().size();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (onlineCount >= 6) {
+                // Enough players - give start voting item (emerald)
+                com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
+            } else {
+                // Not enough players - give insufficient players item (redstone block)
+                com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(online);
+            }
+        }
 
         return true;
     }
@@ -552,13 +569,12 @@ public class VoteCommand implements CommandExecutor {
         String proxyService = plugin.getConfig().getString("proxy-service-name", "Proxy-1");
         
         CloudNetAPI api = CloudNetAPI.getInstance();
-        VotingSession session = VotingSession.getInstance();
         int successCount = 0;
         int failCount = 0;
         
         for (Player player : Bukkit.getOnlinePlayers()) {
-            // Only teleport players who actually voted
-            if (!session.hasVoted(player)) {
+            // Only teleport players who voted (using saved list from before session was cleared)
+            if (!playersToTeleport.contains(player.getUniqueId())) {
                 plugin.getLogger().info("Skipping teleport for " + player.getName() + " - did not vote");
                 continue;
             }
@@ -717,6 +733,14 @@ public class VoteCommand implements CommandExecutor {
         
         // Save vote results to database before clearing session
         saveVoteResultToDatabase(session, winner);
+
+        // Save list of players who voted for teleportation (before clearing session)
+        playersToTeleport.clear();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (session.hasVoted(online)) {
+                playersToTeleport.add(online.getUniqueId());
+            }
+        }
 
         // Start the game
         startGame(winner, initiator);
@@ -929,7 +953,7 @@ public class VoteCommand implements CommandExecutor {
         VotingSession session = VotingSession.getInstance();
 
         // Check if session is active (voting or ready phase)
-        if (!session.isActive() && !session.isReadyPhase()) {
+        if (!session.isActive() && !session.isReadyPhase() && !session.isPreVotingReady()) {
             MessageUtil.sendTranslated(player, "command.no_active_session");
             return true;
         }
@@ -942,9 +966,23 @@ public class VoteCommand implements CommandExecutor {
         // Clear session completely
         session.clear();
 
-        // Remove vote/ready items from all players
+        // Clear BossBar display for all players
+        com.talexck.gameVoting.utils.display.BossBarManager bossBarManager = 
+            com.talexck.gameVoting.utils.display.BossBarManager.getInstance();
         for (Player online : Bukkit.getOnlinePlayers()) {
-            com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
+            bossBarManager.removeBar(online);
+        }
+
+        // Give appropriate items based on player count
+        int onlineCount = Bukkit.getOnlinePlayers().size();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (onlineCount >= 6) {
+                // Enough players - give start voting item (emerald)
+                com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
+            } else {
+                // Not enough players - give insufficient players item (redstone block)
+                com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(online);
+            }
         }
 
         // Update holograms to NOT_VOTING state

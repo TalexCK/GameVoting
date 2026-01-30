@@ -36,16 +36,17 @@ public class VoteItem {
      * @param player The player to give the item to
      */
     public static void giveInsufficientPlayersItem(Player player) {
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
         ItemStack item = new ItemStack(Material.REDSTONE_BLOCK);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&l✖ &4Insufficient Players"));
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_name")));
             meta.setLore(Arrays.asList(
-                ChatColor.translateAlternateColorCodes('&', "&7Not enough players online"),
-                ChatColor.translateAlternateColorCodes('&', "&7"),
-                ChatColor.translateAlternateColorCodes('&', "&eRequires at least &66 players"),
-                ChatColor.translateAlternateColorCodes('&', "&eAdmin can use &6/vote start &eto begin")
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_1")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_2")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_3")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_4"))
             ));
 
             // Add glowing effect
@@ -68,15 +69,16 @@ public class VoteItem {
      * @param player The player to give the item to
      */
     public static void giveStartVotingItem(Player player) {
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
         ItemStack item = new ItemStack(Material.EMERALD);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&l✓ &2Start Voting"));
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.start_voting_name")));
             meta.setLore(Arrays.asList(
-                ChatColor.translateAlternateColorCodes('&', "&7Right-click to mark yourself ready"),
-                ChatColor.translateAlternateColorCodes('&', "&7"),
-                ChatColor.translateAlternateColorCodes('&', "&eVoting starts when all players are ready!")
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.start_voting_lore_1")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.start_voting_lore_2")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.start_voting_lore_3"))
             ));
 
             // Add glowing effect
@@ -100,6 +102,7 @@ public class VoteItem {
      * @param isReady Whether the player is ready
      */
     public static void updateStartVotingItem(Player player, boolean isReady) {
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
         ItemStack item;
         ItemMeta meta;
 
@@ -107,11 +110,11 @@ public class VoteItem {
             item = new ItemStack(Material.GRAY_DYE);
             meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&7&l✓ &8Ready to Start"));
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_start_name")));
                 meta.setLore(Arrays.asList(
-                    ChatColor.translateAlternateColorCodes('&', "&7You are ready!"),
-                    ChatColor.translateAlternateColorCodes('&', "&7"),
-                    ChatColor.translateAlternateColorCodes('&', "&7Waiting for other players...")
+                    ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_start_lore_1")),
+                    ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_start_lore_2")),
+                    ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_start_lore_3"))
                 ));
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 meta.getPersistentDataContainer().set(VOTE_ITEM_KEY, PersistentDataType.STRING, "start_voting");
@@ -132,15 +135,16 @@ public class VoteItem {
      * @param player The player to give the item to
      */
     public static void giveVotingItem(Player player) {
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
         ItemStack item = new ItemStack(Material.COMPASS);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&e&l➤ &6Game Voting"));
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.voting_item_name")));
             meta.setLore(Arrays.asList(
-                ChatColor.translateAlternateColorCodes('&', "&7Right-click to open voting menu"),
-                ChatColor.translateAlternateColorCodes('&', "&7"),
-                ChatColor.translateAlternateColorCodes('&', "&eClick to vote for games!")
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.voting_item_lore_1")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.voting_item_lore_2")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.voting_item_lore_3"))
             ));
 
             // Add glowing effect
@@ -163,15 +167,16 @@ public class VoteItem {
      * @param player The player to give the item to
      */
     public static void giveReadyItem(Player player) {
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
         ItemStack item = new ItemStack(Material.GRAY_DYE);
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
-            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&7&l✓ &8Ready Up"));
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.ready_item_name")));
             meta.setLore(Arrays.asList(
-                ChatColor.translateAlternateColorCodes('&', "&7Right-click to mark yourself as ready"),
-                ChatColor.translateAlternateColorCodes('&', "&7"),
-                ChatColor.translateAlternateColorCodes('&', "&eGame will start when everyone is ready!")
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.ready_item_lore_1")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.ready_item_lore_2")),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.ready_item_lore_3"))
             ));
 
             // Add glowing effect
@@ -194,6 +199,7 @@ public class VoteItem {
      * @param player The player whose item to update
      */
     public static void updateReadyItem(Player player, boolean isReady) {
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
         ItemStack item;
         ItemMeta meta;
 
@@ -201,11 +207,11 @@ public class VoteItem {
             item = new ItemStack(Material.LIME_DYE);
             meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&a&l✓ &2Already Ready"));
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_name")));
                 meta.setLore(Arrays.asList(
-                    ChatColor.translateAlternateColorCodes('&', "&aYou are ready!"),
-                    ChatColor.translateAlternateColorCodes('&', "&7"),
-                    ChatColor.translateAlternateColorCodes('&', "&7Waiting for other players...")
+                    ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_lore_1")),
+                    ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_lore_2")),
+                    ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.already_ready_lore_3"))
                 ));
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 meta.getPersistentDataContainer().set(VOTE_ITEM_KEY, PersistentDataType.STRING, "ready");

@@ -10,6 +10,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -98,10 +99,12 @@ public class HologramDisplayManager {
      */
     private List<String> generateHistoricalTopGames() {
         List<String> lines = new ArrayList<>();
-        
-        lines.add("&e&l═══════════════════");
-        lines.add("&6&lTOP GAMES");
-        lines.add("&e&l═══════════════════");
+
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+
+        lines.add(langManager.getMessage("hologram.top_games_title"));
+        lines.add(langManager.getMessage("hologram.top_games_header"));
+        lines.add(langManager.getMessage("hologram.top_games_title"));
         lines.add("");
 
         DatabaseManager dbManager = DatabaseManager.getInstance();
@@ -110,28 +113,28 @@ public class HologramDisplayManager {
             Map<String, Integer> topGames = repository.getTopWinningGames(10);
 
             if (topGames.isEmpty()) {
-                lines.add("&7No voting history yet");
+                lines.add(langManager.getMessage("hologram.no_history"));
             } else {
                 int rank = 1;
                 for (Map.Entry<String, Integer> entry : topGames.entrySet()) {
                     String gameId = entry.getKey();
                     int wins = entry.getValue();
-                    
+
                     GameConfig gameConfig = gamesManager.getGame(gameId);
                     String gameName = gameConfig != null ? gameConfig.getName() : gameId;
-                    
+
                     String medal = getMedal(rank);
                     lines.add(String.format("&f%s &e%s &7- &a%d wins", medal, gameName, wins));
                     rank++;
                 }
             }
         } else {
-            lines.add("&7Database not enabled");
+            lines.add(langManager.getMessage("hologram.database_disabled"));
         }
 
         lines.add("");
-        lines.add("&7Waiting for voting...");
-        
+        lines.add(langManager.getMessage("hologram.waiting"));
+
         return lines;
     }
 
@@ -142,21 +145,26 @@ public class HologramDisplayManager {
      */
     private List<String> generatePreVotingReady() {
         List<String> lines = new ArrayList<>();
-        
-        lines.add("&e&l═══════════════════");
-        lines.add("&6&lWAITING TO START");
-        lines.add("&e&l═══════════════════");
+
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+
+        lines.add(langManager.getMessage("hologram.waiting_to_start_title"));
+        lines.add(langManager.getMessage("hologram.waiting_to_start_header"));
+        lines.add(langManager.getMessage("hologram.waiting_to_start_title"));
         lines.add("");
-        
+
         VotingSession session = VotingSession.getInstance();
         int readyCount = session.getPreVotingReadyCount();
         int totalPlayers = Bukkit.getOnlinePlayers().size();
-        
-        lines.add("&aReady: &e" + readyCount + "&7/&e" + totalPlayers);
+
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("ready", String.valueOf(readyCount));
+        placeholders.put("total", String.valueOf(totalPlayers));
+        lines.add(langManager.getMessage("hologram.ready_status", placeholders));
         lines.add("");
-        lines.add("&7Right-click the &aEmerald");
-        lines.add("&7in slot 9 to ready up!");
-        
+        lines.add(langManager.getMessage("hologram.ready_instruction_1"));
+        lines.add(langManager.getMessage("hologram.ready_instruction_2"));
+
         return lines;
     }
 
@@ -167,12 +175,14 @@ public class HologramDisplayManager {
      */
     private List<String> generateVotingGameList() {
         List<String> lines = new ArrayList<>();
-        
-        lines.add("&a&l═══════════════════");
-        lines.add("&e&lVOTING ACTIVE");
-        lines.add("&a&l═══════════════════");
+
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+
+        lines.add(langManager.getMessage("hologram.voting_active_title"));
+        lines.add(langManager.getMessage("hologram.voting_active_header"));
+        lines.add(langManager.getMessage("hologram.voting_active_title"));
         lines.add("");
-        lines.add("&7Available Games:");
+        lines.add(langManager.getMessage("hologram.available_games"));
         lines.add("");
 
         for (GameConfig game : gamesManager.getGames()) {
@@ -180,8 +190,8 @@ public class HologramDisplayManager {
         }
 
         lines.add("");
-        lines.add("&7Right-click vote item!");
-        
+        lines.add(langManager.getMessage("hologram.vote_instruction"));
+
         return lines;
     }
 
@@ -192,10 +202,12 @@ public class HologramDisplayManager {
      */
     private List<String> generateVoteResults() {
         List<String> lines = new ArrayList<>();
-        
-        lines.add("&6&l═══════════════════");
-        lines.add("&e&lVOTE RESULTS");
-        lines.add("&6&l═══════════════════");
+
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+
+        lines.add(langManager.getMessage("hologram.vote_results_title"));
+        lines.add(langManager.getMessage("hologram.vote_results_header"));
+        lines.add(langManager.getMessage("hologram.vote_results_title"));
         lines.add("");
 
         VotingSession session = VotingSession.getInstance();
@@ -203,40 +215,40 @@ public class HologramDisplayManager {
         String winnerId = session.getWinner();
 
         if (voteCounts.isEmpty()) {
-            lines.add("&7No votes recorded");
+            lines.add(langManager.getMessage("hologram.no_votes"));
         } else {
             int rank = 1;
             int maxDisplay = 10; // Show top 10 only
-            
+
             for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
                 if (rank > maxDisplay) {
                     break; // Stop after top 10
                 }
-                
+
                 String gameId = entry.getKey();
                 int votes = entry.getValue();
-                
+
                 GameConfig gameConfig = gamesManager.getGame(gameId);
                 String gameName = gameConfig != null ? gameConfig.getName() : gameId;
-                
+
                 boolean isWinner = gameId.equals(winnerId);
-                
+
                 if (isWinner) {
                     String medal = getMedal(rank);
                     lines.add(String.format("&a&l%s %s - %d votes", medal, gameName.toUpperCase(), votes));
-                    lines.add("&a&l★ WINNER ★");
+                    lines.add(langManager.getMessage("hologram.winner_label"));
                 } else {
                     String medal = getMedal(rank);
                     lines.add(String.format("&f%s &e%s &7- &a%d votes", medal, gameName, votes));
                 }
-                
+
                 rank++;
             }
         }
 
         lines.add("");
-        lines.add("&7Get ready to play!");
-        
+        lines.add(langManager.getMessage("hologram.get_ready"));
+
         return lines;
     }
 

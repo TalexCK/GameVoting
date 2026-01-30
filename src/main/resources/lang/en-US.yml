@@ -41,6 +41,21 @@ ready:
   instructions_1: "&7Right-click your ready item or use &e/vote ready"
   instructions_2: "&7Game will start when everyone is ready!"
   instructions_3: "&7Vote starter can use &e/vote gamestart &7to force start"
+  insufficient_players_action: "&c&lInsufficient Players! &7({current}/6) &eAdmin can use &6/vote start"
+  unready_start: "&cYou are no longer ready to start voting!"
+  player_unready_start: "&e{player} &cis no longer ready! &7({count}/{total})"
+  ready_start: "&aYou are ready to start voting!"
+  player_ready_start: "&e{player} &ais ready! &7({count}/{total})"
+  all_ready_start: "&a&lAll players are ready! Starting voting session..."
+  prevoting_not_active: "&cPre-voting ready phase is not active!"
+  voting_not_active: "&cVoting is not currently active!"
+  not_in_ready_phase: "&cNot in ready phase!"
+  unready_message: "&cYou are no longer ready!"
+  player_unready_broadcast: "&e{player} &cis no longer ready! &7({count}/{total})"
+  ready_message: "&aYou are now ready!"
+  player_ready_broadcast: "&e{player} &ais ready! &7({count}/{total})"
+  all_ready_countdown: "&a&lAll players are ready! Starting countdown..."
+  countdown_cancelled_broadcast: "&c&lCountdown cancelled! Waiting for all players to ready up..."
   
 # Game start
 game:
@@ -55,6 +70,7 @@ game:
   creating_service: "&a&l✓ Starting {game} server..."
   teleporting_in: "&7Teleporting in 60 seconds"
   service_creation_failed: "&cFailed to start game server! Check console for details."
+  countdown_actionbar: "&a&lGame starting in &e&l{seconds}&a&l seconds..."
 
 # Teleport
 teleport:
@@ -102,6 +118,25 @@ hologram:
   no_holograms: "&cNo holograms have been created yet."
   list_header: "&e&l▬▬▬▬▬▬▬ Holograms ▬▬▬▬▬▬▬"
   list_entry: "&7#{id}: &e{location}"
+  top_games_title: "&e&l═══════════════════"
+  top_games_header: "&6&lTOP GAMES"
+  no_history: "&7No voting history yet"
+  database_disabled: "&7Database not enabled"
+  waiting: "&7Waiting for voting..."
+  waiting_to_start_title: "&e&l═══════════════════"
+  waiting_to_start_header: "&6&lWAITING TO START"
+  ready_status: "&aReady: &e{ready}&7/&e{total}"
+  ready_instruction_1: "&7Right-click the &aEmerald"
+  ready_instruction_2: "&7in slot 9 to ready up!"
+  voting_active_title: "&a&l═══════════════════"
+  voting_active_header: "&e&lVOTING ACTIVE"
+  available_games: "&7Available Games:"
+  vote_instruction: "&7Right-click vote item!"
+  vote_results_title: "&6&l═══════════════════"
+  vote_results_header: "&e&lVOTE RESULTS"
+  no_votes: "&7No votes recorded"
+  winner_label: "&a&l★ WINNER ★"
+  get_ready: "&7Get ready to play!"
   
 # Session history
 session:
@@ -113,7 +148,47 @@ session:
 # Items
 item:
   cannot_drop: "&cYou cannot drop this item!"
-  
+  insufficient_players_name: "&c&l✖ &4Insufficient Players"
+  insufficient_players_lore_1: "&7Not enough players online"
+  insufficient_players_lore_2: "&7"
+  insufficient_players_lore_3: "&eRequires at least &66 players"
+  insufficient_players_lore_4: "&eAdmin can use &6/vote start &eto begin"
+  start_voting_name: "&a&l✓ &2Start Voting"
+  start_voting_lore_1: "&7Right-click to mark yourself ready"
+  start_voting_lore_2: "&7"
+  start_voting_lore_3: "&eVoting starts when all players are ready!"
+  already_ready_start_name: "&7&l✓ &8Ready to Start"
+  already_ready_start_lore_1: "&7You are ready!"
+  already_ready_start_lore_2: "&7"
+  already_ready_start_lore_3: "&7Waiting for other players..."
+  voting_item_name: "&e&l➤ &6Game Voting"
+  voting_item_lore_1: "&7Right-click to open voting menu"
+  voting_item_lore_2: "&7"
+  voting_item_lore_3: "&eClick to vote for games!"
+  ready_item_name: "&7&l✓ &8Ready Up"
+  ready_item_lore_1: "&7Right-click to mark yourself as ready"
+  ready_item_lore_2: "&7"
+  ready_item_lore_3: "&eGame will start when everyone is ready!"
+  already_ready_name: "&a&l✓ &2Already Ready"
+  already_ready_lore_1: "&aYou are ready!"
+  already_ready_lore_2: "&7"
+  already_ready_lore_3: "&7Waiting for other players..."
+
+# UI
+ui:
+  voting_title: "&e&lVote for a Game"
+  voted_indicator: "&a✓ Voted"
+  click_to_vote: "&7Click to vote"
+  vote_limit_reached: "&c✗ Vote limit reached"
+  your_votes: "&7Your votes: &e{count}/3"
+  vote_added: "&aVote added for {game}"
+  vote_removed: "&cVote removed for {game}"
+  vote_limit: "&cYou've reached the vote limit (3 votes)"
+  voting_inactive: "&cVoting is no longer active!"
+  prev_page: "&e← Previous Page"
+  next_page: "&eNext Page →"
+  close_button: "&c&lClose"
+
 # General
 general:
   separator: "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"

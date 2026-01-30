@@ -41,6 +41,21 @@ ready:
   instructions_1: "&7右键点击你的准备物品或使用 &e/vote ready"
   instructions_2: "&7当所有人都准备好后游戏将开始！"
   instructions_3: "&7投票发起者可以使用 &e/vote gamestart &7强制开始"
+  insufficient_players_action: "&c&l人数不足！&7({current}/6) &e管理员可使用 &6/vote start"
+  unready_start: "&c你不再准备开始投票！"
+  player_unready_start: "&e{player} &c不再准备！&7({count}/{total})"
+  ready_start: "&a你准备开始投票了！"
+  player_ready_start: "&e{player} &a已准备！&7({count}/{total})"
+  all_ready_start: "&a&l所有玩家已准备！开始投票会话..."
+  prevoting_not_active: "&c预投票准备阶段未激活！"
+  voting_not_active: "&c投票当前未激活！"
+  not_in_ready_phase: "&c当前不在准备阶段！"
+  unready_message: "&c你不再准备了！"
+  player_unready_broadcast: "&e{player} &c不再准备！&7({count}/{total})"
+  ready_message: "&a你现在已准备！"
+  player_ready_broadcast: "&e{player} &a已准备！&7({count}/{total})"
+  all_ready_countdown: "&a&l所有玩家已准备！开始倒计时..."
+  countdown_cancelled_broadcast: "&c&l倒计时已取消！等待所有玩家准备..."
   
 # 游戏开始
 game:
@@ -55,6 +70,7 @@ game:
   creating_service: "&a&l✓ 正在启动 {game} 服务器..."
   teleporting_in: "&7将在 60 秒后传送"
   service_creation_failed: "&c启动游戏服务器失败！请查看控制台了解详情。"
+  countdown_actionbar: "&a&l游戏将在 &e&l{seconds}&a&l 秒后开始..."
 
 # 传送
 teleport:
@@ -102,6 +118,25 @@ hologram:
   no_holograms: "&c尚未创建任何全息图。"
   list_header: "&e&l▬▬▬▬▬▬▬ 全息图 ▬▬▬▬▬▬▬"
   list_entry: "&7#{id}：&e{location}"
+  top_games_title: "&e&l═══════════════════"
+  top_games_header: "&6&l热门游戏"
+  no_history: "&7暂无投票历史记录"
+  database_disabled: "&7数据库未启用"
+  waiting: "&7等待投票中..."
+  waiting_to_start_title: "&e&l═══════════════════"
+  waiting_to_start_header: "&6&l等待开始"
+  ready_status: "&a已准备：&e{ready}&7/&e{total}"
+  ready_instruction_1: "&7右键点击 &a绿宝石"
+  ready_instruction_2: "&7在 9 号位准备！"
+  voting_active_title: "&a&l═══════════════════"
+  voting_active_header: "&e&l投票进行中"
+  available_games: "&7可用游戏："
+  vote_instruction: "&7右键点击投票物品！"
+  vote_results_title: "&6&l═══════════════════"
+  vote_results_header: "&e&l投票结果"
+  no_votes: "&7没有投票记录"
+  winner_label: "&a&l★ 获胜者 ★"
+  get_ready: "&7准备开始游戏！"
   
 # 会话历史
 session:
@@ -113,7 +148,47 @@ session:
 # 物品
 item:
   cannot_drop: "&c你不能丢弃此物品！"
+  insufficient_players_name: "&c&l✖ &4人数不足"
+  insufficient_players_lore_1: "&7在线人数不足"
+  insufficient_players_lore_2: "&7"
+  insufficient_players_lore_3: "&e需要至少 &66 名玩家"
+  insufficient_players_lore_4: "&e管理员可使用 &6/vote start &e开始"
+  start_voting_name: "&a&l✓ &2开始投票"
+  start_voting_lore_1: "&7右键点击标记自己已准备"
+  start_voting_lore_2: "&7"
+  start_voting_lore_3: "&e所有玩家准备后开始投票！"
+  already_ready_start_name: "&7&l✓ &8准备开始"
+  already_ready_start_lore_1: "&7你已准备！"
+  already_ready_start_lore_2: "&7"
+  already_ready_start_lore_3: "&7等待其他玩家..."
+  voting_item_name: "&e&l➤ &6游戏投票"
+  voting_item_lore_1: "&7右键点击打开投票菜单"
+  voting_item_lore_2: "&7"
+  voting_item_lore_3: "&e点击为游戏投票！"
+  ready_item_name: "&7&l✓ &8准备"
+  ready_item_lore_1: "&7右键点击标记自己已准备"
+  ready_item_lore_2: "&7"
+  ready_item_lore_3: "&e所有人准备后游戏开始！"
+  already_ready_name: "&a&l✓ &2已准备"
+  already_ready_lore_1: "&a你已准备！"
+  already_ready_lore_2: "&7"
+  already_ready_lore_3: "&7等待其他玩家..."
   
+# UI
+ui:
+  voting_title: "&e&l为游戏投票"
+  voted_indicator: "&a✓ 已投票"
+  click_to_vote: "&7点击投票"
+  vote_limit_reached: "&c✗ 投票次数已达上限"
+  your_votes: "&7你的投票：&e{count}/3"
+  vote_added: "&a已为 {game} 投票"
+  vote_removed: "&c已移除对 {game} 的投票"
+  vote_limit: "&c你已达到投票上限（3 票）"
+  voting_inactive: "&c投票不再活跃！"
+  prev_page: "&e← 上一页"
+  next_page: "&e下一页 →"
+  close_button: "&c&l关闭"
+
 # 通用
 general:
   separator: "&e&l▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"

@@ -22,7 +22,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Custom voting UI with border, pagination, and close button.
@@ -52,7 +54,7 @@ public class VotingUI extends ChestUI {
     private int currentPage;
 
     public VotingUI(Player player, GamesConfigManager gamesManager) {
-        super(ColorUtil.stripColors("&e&lVote for a Game"), ROWS);
+        super(ColorUtil.stripColors(com.talexck.gameVoting.utils.language.LanguageManager.getInstance().getMessage("ui.voting_title")), ROWS);
         this.player = player;
         this.gamesManager = gamesManager;
         this.games = gamesManager.getGames();
@@ -157,18 +159,22 @@ public class VotingUI extends ChestUI {
             boolean voted = session.hasVotedFor(player, game.getId());
             int voteCount = session.getPlayerVoteCount(player);
 
+            var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+
             lore.add(Component.text(""));
             if (voted) {
-                lore.add(ColorUtil.colorize("&a✓ Voted"));
+                lore.add(ColorUtil.colorize(langManager.getMessage("ui.voted_indicator")));
             } else {
                 if (voteCount < 3) {
-                    lore.add(ColorUtil.colorize("&7Click to vote"));
+                    lore.add(ColorUtil.colorize(langManager.getMessage("ui.click_to_vote")));
                 } else {
-                    lore.add(ColorUtil.colorize("&c✗ Vote limit reached"));
+                    lore.add(ColorUtil.colorize(langManager.getMessage("ui.vote_limit_reached")));
                 }
             }
             lore.add(Component.text(""));
-            lore.add(ColorUtil.colorize("&7Your votes: &e" + voteCount + "/3"));
+            Map<String, String> votePlaceholders = new HashMap<>();
+            votePlaceholders.put("count", String.valueOf(voteCount));
+            lore.add(ColorUtil.colorize(langManager.getMessage("ui.your_votes", votePlaceholders)));
 
             meta.lore(lore);
 
@@ -196,9 +202,10 @@ public class VotingUI extends ChestUI {
      */
     private void handleVote(GameConfig game) {
         VotingSession session = VotingSession.getInstance();
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
 
         if (!session.isActive()) {
-            MessageUtil.sendMessage(player, "&cVoting is no longer active!");
+            MessageUtil.sendMessage(player, langManager.getMessage("ui.voting_inactive"));
             player.closeInventory();
             return;
         }
@@ -206,25 +213,28 @@ public class VotingUI extends ChestUI {
         // Record the vote (toggle behavior)
         VoteResult result = session.vote(player, game);
 
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("game", game.getName());
+
         // Handle result and send feedback
         switch (result) {
             case ADDED:
-                MessageUtil.sendMessage(player, "&aVote added for " + game.getName());
-                ActionBarUtil.sendActionBar(player, "&aVoted for " + game.getName());
+                MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_added", placeholders));
+                ActionBarUtil.sendActionBar(player, langManager.getMessage("ui.vote_added", placeholders));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
                 break;
             case REMOVED:
-                MessageUtil.sendMessage(player, "&cVote removed for " + game.getName());
-                ActionBarUtil.sendActionBar(player, "&cRemoved vote for " + game.getName());
+                MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_removed", placeholders));
+                ActionBarUtil.sendActionBar(player, langManager.getMessage("ui.vote_removed", placeholders));
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 1.0f);
                 break;
             case LIMIT_REACHED:
-                MessageUtil.sendMessage(player, "&cYou've reached the vote limit (3 votes)");
-                ActionBarUtil.sendActionBar(player, "&cVote limit reached!");
+                MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_limit"));
+                ActionBarUtil.sendActionBar(player, langManager.getMessage("ui.vote_limit"));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 break;
             case SESSION_INACTIVE:
-                MessageUtil.sendMessage(player, "&cVoting is no longer active!");
+                MessageUtil.sendMessage(player, langManager.getMessage("ui.voting_inactive"));
                 player.closeInventory();
                 return;
         }
@@ -239,13 +249,14 @@ public class VotingUI extends ChestUI {
      */
     private void updateNavigation() {
         int totalPages = getTotalPages();
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
 
         // Previous button
         if (currentPage > 0) {
             ItemStack prevButton = new ItemStack(Material.ARROW);
             ItemMeta meta = prevButton.getItemMeta();
             if (meta != null) {
-                meta.displayName(ColorUtil.colorize("&e← Previous Page"));
+                meta.displayName(ColorUtil.colorize(langManager.getMessage("ui.prev_page")));
                 prevButton.setItemMeta(meta);
             }
             setItem(PREV_SLOT, ClickableItem.of(prevButton, p -> {
@@ -268,7 +279,7 @@ public class VotingUI extends ChestUI {
         ItemStack closeButton = new ItemStack(Material.BARRIER);
         ItemMeta closeMeta = closeButton.getItemMeta();
         if (closeMeta != null) {
-            closeMeta.displayName(ColorUtil.colorize("&c&lClose"));
+            closeMeta.displayName(ColorUtil.colorize(langManager.getMessage("ui.close_button")));
             closeButton.setItemMeta(closeMeta);
         }
         setItem(CLOSE_SLOT, ClickableItem.of(closeButton, Player::closeInventory));
@@ -278,7 +289,7 @@ public class VotingUI extends ChestUI {
             ItemStack nextButton = new ItemStack(Material.ARROW);
             ItemMeta meta = nextButton.getItemMeta();
             if (meta != null) {
-                meta.displayName(ColorUtil.colorize("&eNext Page →"));
+                meta.displayName(ColorUtil.colorize(langManager.getMessage("ui.next_page")));
                 nextButton.setItemMeta(meta);
             }
             setItem(NEXT_SLOT, ClickableItem.of(nextButton, p -> {
