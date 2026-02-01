@@ -281,6 +281,9 @@ public class VoteCommand implements CommandExecutor {
         // Give appropriate items based on player count (replace compass with redstone block/emerald)
         int onlineCount = Bukkit.getOnlinePlayers().size();
         for (Player online : Bukkit.getOnlinePlayers()) {
+            // First remove the old vote item (compass or ready item)
+            com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
+
             if (onlineCount >= 6) {
                 // Enough players - give start voting item (emerald)
                 com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
@@ -958,16 +961,11 @@ public class VoteCommand implements CommandExecutor {
             return true;
         }
 
-        // Stop countdown if running
-        if (session.isCountdownActive()) {
-            session.stopCountdown();
-        }
-
-        // Clear session completely
+        // Clear session completely (this also stops countdown and cancels tasks)
         session.clear();
 
-        // Clear BossBar display for all players
-        com.talexck.gameVoting.utils.display.BossBarManager bossBarManager = 
+        // Clear BossBar display for all players (do this AFTER clearing session to ensure tasks are stopped)
+        com.talexck.gameVoting.utils.display.BossBarManager bossBarManager =
             com.talexck.gameVoting.utils.display.BossBarManager.getInstance();
         for (Player online : Bukkit.getOnlinePlayers()) {
             bossBarManager.removeBar(online);
@@ -976,6 +974,9 @@ public class VoteCommand implements CommandExecutor {
         // Give appropriate items based on player count
         int onlineCount = Bukkit.getOnlinePlayers().size();
         for (Player online : Bukkit.getOnlinePlayers()) {
+            // First remove the old vote item (compass or ready item)
+            com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
+
             if (onlineCount >= 6) {
                 // Enough players - give start voting item (emerald)
                 com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
