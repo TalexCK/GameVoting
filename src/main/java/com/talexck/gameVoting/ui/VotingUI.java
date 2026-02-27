@@ -1,5 +1,6 @@
 package com.talexck.gameVoting.ui;
 
+import com.talexck.gameVoting.GameVoting;
 import com.talexck.gameVoting.config.GameConfig;
 import com.talexck.gameVoting.config.GamesConfigManager;
 import com.talexck.gameVoting.utils.ColorUtil;
@@ -7,6 +8,7 @@ import com.talexck.gameVoting.utils.gui.ClickableItem;
 import com.talexck.gameVoting.utils.gui.ChestUI;
 import com.talexck.gameVoting.utils.gui.ChestUIListener;
 import com.talexck.gameVoting.utils.message.MessageUtil;
+import com.talexck.gameVoting.utils.version.ClientVersionUtil;
 import com.talexck.gameVoting.voting.VotingSession;
 import com.talexck.gameVoting.voting.VoteResult;
 import com.talexck.gameVoting.utils.display.ActionBarUtil;
@@ -145,6 +147,8 @@ public class VotingUI extends ChestUI {
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
+            var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+
             // Set display name
             meta.displayName(ColorUtil.colorize(game.getName()));
 
@@ -153,13 +157,22 @@ public class VotingUI extends ChestUI {
             for (String line : game.getDescription()) {
                 lore.add(ColorUtil.colorize(line));
             }
+            lore.add(Component.text(""));
+            String expectedVersion = game.getVersion();
+            if (expectedVersion == null || expectedVersion.trim().isEmpty()
+                || "any".equalsIgnoreCase(expectedVersion.trim())
+                || "*".equals(expectedVersion.trim())) {
+                lore.add(ColorUtil.colorize(langManager.getMessage("ui.version_any")));
+            } else {
+                Map<String, String> versionPlaceholders = new HashMap<>();
+                versionPlaceholders.put("version", expectedVersion);
+                lore.add(ColorUtil.colorize(langManager.getMessage("ui.version_label", versionPlaceholders)));
+            }
 
             // Add voting indicator if player voted for this game
             VotingSession session = VotingSession.getInstance();
             boolean voted = session.hasVotedFor(player, game.getId());
             int voteCount = session.getPlayerVoteCount(player);
-
-            var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
 
             lore.add(Component.text(""));
             if (voted) {
@@ -222,6 +235,7 @@ public class VotingUI extends ChestUI {
                 MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_added", placeholders));
                 ActionBarUtil.sendActionBar(player, langManager.getMessage("ui.vote_added", placeholders));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                warnVersionMismatchOnVote(game);
                 break;
             case REMOVED:
                 MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_removed", placeholders));
@@ -242,6 +256,41 @@ public class VotingUI extends ChestUI {
         // Refresh the UI to show updated vote indicator
         updateContent();
         player.updateInventory();
+    }
+
+    private void warnVersionMismatchOnVote(GameConfig game) {
+        String expectedVersion = game.getVersion();
+        if (expectedVersion == null || expectedVersion.trim().isEmpty()
+            || "any".equalsIgnoreCase(expectedVersion.trim())
+            || "*".equals(expectedVersion.trim())) {
+            return;
+        }
+
+        var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+        String playerVersion = null;
+        GameVoting plugin = GameVoting.getInstance();
+        if (plugin != null && plugin.getProxyVersionBridge() != null) {
+            playerVersion = plugin.getProxyVersionBridge().getCachedVersion(player.getUniqueId()).orElse(null);
+            if (playerVersion == null) {
+                plugin.getProxyVersionBridge().requestPlayerVersion(player, player.getUniqueId());
+            }
+        }
+        if (playerVersion == null) {
+            playerVersion = ClientVersionUtil.detectPlayerVersion(player);
+        }
+
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("game", game.getName());
+        placeholders.put("expected", expectedVersion);
+        placeholders.put("current", playerVersion == null ? "Unknown" : playerVersion);
+
+        if (playerVersion == null) {
+            MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_version_not_detected_warning", placeholders));
+            return;
+        }
+        if (!ClientVersionUtil.isVersionMatch(playerVersion, expectedVersion)) {
+            MessageUtil.sendMessage(player, langManager.getMessage("ui.vote_version_mismatch_warning", placeholders));
+        }
     }
 
     /**

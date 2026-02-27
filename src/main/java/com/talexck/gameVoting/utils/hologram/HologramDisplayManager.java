@@ -219,8 +219,12 @@ public class HologramDisplayManager {
         } else {
             int rank = 1;
             int maxDisplay = 10; // Show top 10 only
+            List<Map.Entry<String, Integer>> sortedEntries = voteCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
+                    .thenComparing(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER)))
+                .toList();
 
-            for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+            for (Map.Entry<String, Integer> entry : sortedEntries) {
                 if (rank > maxDisplay) {
                     break; // Stop after top 10
                 }

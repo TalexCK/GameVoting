@@ -15,14 +15,38 @@ public class GameConfig {
     private final Material material;
     private final int customModelData;
     private final String cloudnetTask;
+    private final String version;
+    private final boolean waitForBridgeReady;
+    private final int expectedStartupSeconds;
 
     public GameConfig(String id, String name, List<String> description, Material material, int customModelData, String cloudnetTask) {
+        this(id, name, description, material, customModelData, cloudnetTask, null, true, 120);
+    }
+
+    public GameConfig(String id, String name, List<String> description, Material material, int customModelData, String cloudnetTask, String version) {
+        this(id, name, description, material, customModelData, cloudnetTask, version, true, 120);
+    }
+
+    public GameConfig(
+            String id,
+            String name,
+            List<String> description,
+            Material material,
+            int customModelData,
+            String cloudnetTask,
+            String version,
+            boolean waitForBridgeReady,
+            int expectedStartupSeconds
+    ) {
         this.id = id;
         this.name = name;
         this.description = new ArrayList<>(description);
         this.material = material;
         this.customModelData = customModelData;
         this.cloudnetTask = cloudnetTask;
+        this.version = version;
+        this.waitForBridgeReady = waitForBridgeReady;
+        this.expectedStartupSeconds = Math.max(1, expectedStartupSeconds);
     }
 
     /**
@@ -79,6 +103,33 @@ public class GameConfig {
         return cloudnetTask;
     }
 
+    /**
+     * Get the expected client version for this game.
+     *
+     * @return Expected version string, null if unrestricted
+     */
+    public String getVersion() {
+        return version;
+    }
+
+    /**
+     * Whether teleport should wait for bridge-ready state.
+     *
+     * @return true to wait for bridge-ready, false to use expected startup seconds
+     */
+    public boolean isWaitForBridgeReady() {
+        return waitForBridgeReady;
+    }
+
+    /**
+     * Expected startup seconds used when bridge-ready waiting is disabled.
+     *
+     * @return startup delay seconds, minimum 1
+     */
+    public int getExpectedStartupSeconds() {
+        return expectedStartupSeconds;
+    }
+
     @Override
     public String toString() {
         return "GameConfig{" +
@@ -86,6 +137,9 @@ public class GameConfig {
                 ", name='" + name + '\'' +
                 ", material=" + material +
                 ", cloudnetTask='" + cloudnetTask + '\'' +
+                ", version='" + version + '\'' +
+                ", waitForBridgeReady=" + waitForBridgeReady +
+                ", expectedStartupSeconds=" + expectedStartupSeconds +
                 '}';
     }
 }

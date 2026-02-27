@@ -1,5 +1,6 @@
 package com.talexck.gameVoting.commands;
 
+import com.talexck.gameVoting.api.cloudnet.CloudNetAPI;
 import com.talexck.gameVoting.config.GamesConfigManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -26,7 +27,7 @@ public class VoteTabCompleter implements TabCompleter {
 
         if (args.length == 1) {
             // First argument - main subcommands
-            List<String> subcommands = Arrays.asList("start", "stop", "forcestart", "ready", "gamestart", "holograms", "session", "reload", "join");
+            List<String> subcommands = Arrays.asList("start", "stop", "stopgame", "gamelist", "forcestart", "ready", "gamestart", "holograms", "session", "reload", "join");
             
             // Filter based on permissions
             for (String sub : subcommands) {
@@ -42,8 +43,8 @@ public class VoteTabCompleter implements TabCompleter {
             
             switch (subcommand) {
                 case "start":
-                    // Suggest time in minutes
-                    completions.addAll(Arrays.asList("1", "3", "5", "10"));
+                    // Suggest minute durations (supports decimal minute format)
+                    completions.addAll(Arrays.asList("0.1min", "0.5min", "1", "1min", "3", "5", "10"));
                     break;
                     
                 case "forcestart":
@@ -54,6 +55,20 @@ public class VoteTabCompleter implements TabCompleter {
                             .filter(id -> id.toLowerCase().startsWith(args[1].toLowerCase()))
                             .collect(Collectors.toList()));
                     }
+                    break;
+
+                case "stopgame":
+                    // Suggest online game IDs from /vote gamelist
+                    completions.addAll(getOnlineGameIds().stream()
+                        .filter(id -> id.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList()));
+                    break;
+
+                case "join":
+                    // Suggest online game IDs for /vote join <game>
+                    completions.addAll(getOnlineGameIds().stream()
+                        .filter(id -> id.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList()));
                     break;
                     
                 case "holograms":
@@ -92,6 +107,35 @@ public class VoteTabCompleter implements TabCompleter {
      * Check if a subcommand requires admin permission.
      */
     private boolean requiresAdmin(String subcommand) {
-        return Arrays.asList("start", "stop", "forcestart", "gamestart", "holograms", "session", "reload").contains(subcommand);
+        return Arrays.asList("stop", "stopgame", "gamelist", "forcestart", "gamestart", "holograms", "session", "reload").contains(subcommand);
+    }
+
+    private List<String> getOnlineGameIds() {
+        if (gamesManager == null) {
+            return List.of();
+        }
+
+        try {
+            CloudNetAPI api = CloudNetAPI.getInstance();
+            List<String> gameIds = new ArrayList<>();
+
+            for (var game : gamesManager.getGames()) {
+                String taskName = game.getCloudnetTask();
+                if (taskName == null || taskName.isBlank()) {
+                    continue;
+                }
+
+                boolean hasOnlineService = api.getServicesByTask(taskName).stream()
+                    .anyMatch(service -> "RUNNING".equalsIgnoreCase(service.lifeCycle().name()));
+
+                if (hasOnlineService) {
+                    gameIds.add(game.getId());
+                }
+            }
+
+            return gameIds;
+        } catch (Exception ignored) {
+            return List.of();
+        }
     }
 }

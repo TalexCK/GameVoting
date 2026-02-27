@@ -23,10 +23,11 @@ public class VotingPlayerQuitListener implements Listener {
         // Wait 1 tick to ensure player count is updated
         Bukkit.getScheduler().runTaskLater(com.talexck.gameVoting.GameVoting.getInstance(), () -> {
             int onlineCount = Bukkit.getOnlinePlayers().size();
+            int requiredPlayers = session.getRequiredPlayers();
 
-            // Only update if no voting is active and player count dropped below 6
+            // Only update if no voting is active and player count dropped below required threshold
             if (!session.isActive() && !session.isPreVotingReady() && !session.isReadyPhase()) {
-                if (onlineCount < 6 && onlineCount > 0) {
+                if (onlineCount < requiredPlayers && onlineCount > 0) {
                     // Give insufficient players item to all remaining players
                     for (Player player : Bukkit.getOnlinePlayers()) {
                         com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(player);

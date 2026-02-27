@@ -5,6 +5,7 @@ import com.talexck.gameVoting.commands.VoteCommand;
 import com.talexck.gameVoting.ui.VotingUI;
 import com.talexck.gameVoting.utils.item.VoteItem;
 import com.talexck.gameVoting.utils.message.MessageUtil;
+import com.talexck.gameVoting.utils.version.ReadyVersionValidator;
 import com.talexck.gameVoting.voting.VotingSession;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -66,9 +67,9 @@ public class VoteItemListener implements Listener {
                 int currentPlayers = Bukkit.getOnlinePlayers().size();
                 Map<String, String> placeholders = new HashMap<>();
                 placeholders.put("current", String.valueOf(currentPlayers));
+                placeholders.put("required", String.valueOf(session.getRequiredPlayers()));
                 com.talexck.gameVoting.utils.display.ActionBarUtil.sendActionBar(player,
                     langManager.getMessage("ready.insufficient_players_action", placeholders));
-                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 break;
                 
             case "start_voting":
@@ -180,6 +181,20 @@ public class VoteItemListener implements Listener {
                             MessageUtil.broadcast(readyLangMgr.getMessage("ready.countdown_cancelled_broadcast"));
                         }
                     } else {
+                        ReadyVersionValidator.ValidationResult versionResult =
+                            ReadyVersionValidator.validate(player, GameVoting.getInstance().getGamesManager(), session);
+                        if (!versionResult.allowed()) {
+                            Map<String, String> versionPlaceholders = new HashMap<>();
+                            versionPlaceholders.put("expected", versionResult.expectedVersion());
+                            versionPlaceholders.put("current", versionResult.playerVersion() == null ? "Unknown" : versionResult.playerVersion());
+                            if (versionResult.detectionFailed()) {
+                                MessageUtil.sendTranslated(player, "ready.version_not_detected", versionPlaceholders);
+                            } else {
+                                MessageUtil.sendTranslated(player, "ready.version_mismatch", versionPlaceholders);
+                            }
+                            return;
+                        }
+
                         // Ready up
                         session.markPlayerReady(player.getUniqueId());
                         VoteItem.updateReadyItem(player, true);
@@ -272,7 +287,8 @@ public class VoteItemListener implements Listener {
      */
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        // Vote item will be automatically removed when player logs out
-        // No special handling needed
+        if (GameVoting.getInstance().getProxyVersionBridge() != null) {
+            GameVoting.getInstance().getProxyVersionBridge().invalidate(event.getPlayer().getUniqueId());
+        }
     }
 }

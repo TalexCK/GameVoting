@@ -21,6 +21,8 @@ public final class GameVoting extends JavaPlugin {
     private GamesConfigManager gamesManager;
     private com.talexck.gameVoting.config.HologramConfigManager hologramConfigManager;
     private com.talexck.gameVoting.utils.hologram.HologramDisplayManager hologramDisplayManager;
+    private com.talexck.gameVoting.tasks.IdleServerShutdownManager idleShutdownManager;
+    private com.talexck.gameVoting.proxy.ProxyVersionBridge proxyVersionBridge;
 
     /**
      * Get the plugin instance.
@@ -56,6 +58,15 @@ public final class GameVoting extends JavaPlugin {
      */
     public com.talexck.gameVoting.utils.hologram.HologramDisplayManager getHologramDisplayManager() {
         return hologramDisplayManager;
+    }
+
+    /**
+     * Get proxy version bridge manager.
+     *
+     * @return proxy version bridge
+     */
+    public com.talexck.gameVoting.proxy.ProxyVersionBridge getProxyVersionBridge() {
+        return proxyVersionBridge;
     }
 
     @Override
@@ -95,6 +106,11 @@ public final class GameVoting extends JavaPlugin {
         // Register ChestUI listener
         getServer().getPluginManager().registerEvents(new ChestUIListener(), this);
         getLogger().info("ChestUI utility loaded successfully!");
+
+        // Initialize proxy version bridge (paper <-> velocity plugin message)
+        proxyVersionBridge = new com.talexck.gameVoting.proxy.ProxyVersionBridge(this);
+        proxyVersionBridge.start();
+        getLogger().info("ProxyVersionBridge initialized");
 
         // Register BossBar listener for cleanup
         getServer().getPluginManager().registerEvents(new BossBarListener(), this);
@@ -160,12 +176,17 @@ public final class GameVoting extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PartyQuitListener(), this);
         getLogger().info("Party system initialized");
 
+        // Enable idle shutdown for non-lobby/proxy game services
+        idleShutdownManager = new com.talexck.gameVoting.tasks.IdleServerShutdownManager(this);
+        idleShutdownManager.start();
+
         // Give appropriate item to all online players on startup
         Bukkit.getScheduler().runTaskLater(this, () -> {
             int onlineCount = Bukkit.getOnlinePlayers().size();
+            int requiredPlayers = com.talexck.gameVoting.voting.VotingSession.getInstance().getRequiredPlayers();
             if (onlineCount > 0) {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    if (onlineCount >= 6) {
+                    if (onlineCount >= requiredPlayers) {
                         // Give green emerald for ready system
                         com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(player);
                     } else {
@@ -174,6 +195,20 @@ public final class GameVoting extends JavaPlugin {
                     }
                 }
                 getLogger().info("Given startup items to " + onlineCount + " players");
+
+                if (onlineCount >= requiredPlayers) {
+                    com.talexck.gameVoting.utils.message.MessageUtil.broadcastTranslated("ready.reached_min_players_start");
+                }
+            }
+
+            // Initialize hologram displays to show NOT_VOTING state (top games)
+            var locations = hologramConfigManager.getAllLocations();
+            if (!locations.isEmpty()) {
+                hologramDisplayManager.updateAllHolograms(
+                    com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.NOT_VOTING,
+                    locations
+                );
+                getLogger().info("Initialized " + locations.size() + " hologram(s) with popular games display");
             }
         }, 20L); // Delay 1 second to ensure all players are loaded
 
@@ -203,6 +238,14 @@ public final class GameVoting extends JavaPlugin {
 
         // Clear all active menus
         ChestUIListener.clearAll();
+
+        if (idleShutdownManager != null) {
+            idleShutdownManager.shutdown();
+        }
+
+        if (proxyVersionBridge != null) {
+            proxyVersionBridge.shutdown();
+        }
 
         getLogger().info("GameVoting plugin disabled!");
     }

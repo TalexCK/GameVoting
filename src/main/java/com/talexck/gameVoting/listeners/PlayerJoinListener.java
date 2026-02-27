@@ -1,11 +1,15 @@
 package com.talexck.gameVoting.listeners;
 
+import com.talexck.gameVoting.GameVoting;
 import com.talexck.gameVoting.voting.VotingSession;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 
 /**
  * Listener for player join events.
@@ -23,7 +27,10 @@ public class PlayerJoinListener implements Listener {
 
         // Wait 1 tick to ensure player is fully loaded
         Bukkit.getScheduler().runTaskLater(com.talexck.gameVoting.GameVoting.getInstance(), () -> {
+            applyForcedSpawnpoint(player);
+
             int onlineCount = Bukkit.getOnlinePlayers().size();
+            int requiredPlayers = session.getRequiredPlayers();
 
             // Check current voting state
             if (session.isPreVotingReady()) {
@@ -37,14 +44,68 @@ public class PlayerJoinListener implements Listener {
                 com.talexck.gameVoting.utils.item.VoteItem.giveReadyItem(player);
             } else {
                 // No voting active - give appropriate waiting item based on player count
-                if (onlineCount >= 6) {
+                if (onlineCount >= requiredPlayers) {
                     // Give emerald for ready system
                     com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(player);
+
+                    // If this join reached the required threshold, update all players and announce start tip.
+                    if (onlineCount - 1 < requiredPlayers) {
+                        for (Player online : Bukkit.getOnlinePlayers()) {
+                            com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
+                        }
+                        com.talexck.gameVoting.utils.message.MessageUtil.broadcastTranslated("ready.reached_min_players_start");
+                    }
                 } else {
                     // Not enough players - give redstone block
                     com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(player);
                 }
             }
+
+            // Query client version from velocity bridge.
+            if (GameVoting.getInstance().getProxyVersionBridge() != null) {
+                GameVoting.getInstance().getProxyVersionBridge().requestPlayerVersion(player, player.getUniqueId());
+            }
         }, 1L);
+    }
+
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        GameVoting plugin = GameVoting.getInstance();
+        if (plugin == null || !plugin.getConfig().getBoolean("spawnpoint.enable", false)) {
+            return;
+        }
+
+        Location spawnLocation = getConfiguredSpawnLocation(plugin);
+        if (spawnLocation == null) {
+            return;
+        }
+
+        event.setRespawnLocation(spawnLocation);
+    }
+
+    private void applyForcedSpawnpoint(Player player) {
+        GameVoting plugin = GameVoting.getInstance();
+        if (plugin == null || !plugin.getConfig().getBoolean("spawnpoint.enable", false)) {
+            return;
+        }
+
+        Location spawnLocation = getConfiguredSpawnLocation(plugin);
+        if (spawnLocation == null) {
+            return;
+        }
+
+        player.setBedSpawnLocation(spawnLocation, true);
+    }
+
+    private Location getConfiguredSpawnLocation(GameVoting plugin) {
+        World world = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
+        if (world == null) {
+            return null;
+        }
+
+        double x = plugin.getConfig().getDouble("spawnpoint.x", 0.0D);
+        double y = plugin.getConfig().getDouble("spawnpoint.y", 64.0D);
+        double z = plugin.getConfig().getDouble("spawnpoint.z", 0.0D);
+        return new Location(world, x, y, z);
     }
 }

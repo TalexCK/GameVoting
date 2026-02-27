@@ -18,9 +18,9 @@ public class VotingCountdownTask extends BukkitRunnable {
     private final VotingSession session;
     private final int totalSeconds;
 
-    public VotingCountdownTask(VotingSession session, int durationMinutes) {
+    public VotingCountdownTask(VotingSession session, int durationSeconds) {
         this.session = session;
-        this.totalSeconds = durationMinutes * 60;
+        this.totalSeconds = durationSeconds;
     }
 
     @Override
