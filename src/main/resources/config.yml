@@ -12,6 +12,29 @@ language: "en-US"
 # Used for teleporting players: /cloud service <proxy-name> command send <player> <target>
 proxy-service-name: "Proxy-1"
 
+# Teleport strategy is configured per game in games.yml
+
+# Force player spawnpoint (respawn point)
+# Default disabled. Only x/y/z are required and apply to the server's main world.
+spawnpoint:
+  enable: false
+  x: 0
+  y: 64
+  z: 0
+
+# Auto stop sub-server when empty for a period.
+# Lobby/Proxy should be excluded by keyword to avoid accidental shutdown.
+idle-shutdown:
+  enabled: true
+  idle-minutes: 10
+  check-interval-seconds: 60
+  excluded-task-keywords:
+    - "lobby"
+    - "proxy"
+  excluded-service-keywords:
+    - "lobby"
+    - "proxy"
+
 # Database configuration
 # Supported types: postgresql, mysql, mongodb, none
 database:

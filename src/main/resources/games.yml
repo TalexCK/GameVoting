@@ -1,5 +1,8 @@
 # Game Voting Configuration
 # Define games that players can vote for
+# 每个游戏都需要配置传送策略：
+# wait-for-bridge-ready: true  -> 等待 CloudNet Bridge 就绪后传送
+# wait-for-bridge-ready: false -> 按 expected-startup-seconds 延迟后传送
 
 games:
   - id: "bedwars"
@@ -10,6 +13,9 @@ games:
     material: "RED_BED"
     custom-model-data: 0
     cloudnet-task: "BedWars"
+    version: "1.20.1"
+    wait-for-bridge-ready: true
+    expected-startup-seconds: 120
 
   - id: "skywars"
     name: "&b&lSkyWars"
@@ -19,3 +25,6 @@ games:
     material: "GRASS_BLOCK"
     custom-model-data: 0
     cloudnet-task: "SkyWars"
+    version: "1.20.1"
+    wait-for-bridge-ready: true
+    expected-startup-seconds: 120

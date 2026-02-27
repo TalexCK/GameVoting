@@ -80,6 +80,9 @@ public class GamesConfigManager {
         ));
         bedwars.set("material", "RED_BED");
         bedwars.set("custom-model-data", 0);
+        bedwars.set("version", "1.20.1");
+        bedwars.set("wait-for-bridge-ready", true);
+        bedwars.set("expected-startup-seconds", 120);
         defaultGames.add(bedwars);
 
         // SkyWars
@@ -92,6 +95,9 @@ public class GamesConfigManager {
         ));
         skywars.set("material", "GRASS_BLOCK");
         skywars.set("custom-model-data", 0);
+        skywars.set("version", "1.20.1");
+        skywars.set("wait-for-bridge-ready", true);
+        skywars.set("expected-startup-seconds", 120);
         defaultGames.add(skywars);
 
         config.set("games", defaultGames);
@@ -147,6 +153,15 @@ public class GamesConfigManager {
                 String materialName = section.getString("material", "STONE");
                 int customModelData = section.getInt("custom-model-data", 0);
                 String cloudnetTask = section.getString("cloudnet-task");
+                String version = section.getString("version");
+                if (!section.contains("wait-for-bridge-ready")) {
+                    plugin.getLogger().warning("Game '" + id + "' missing wait-for-bridge-ready, defaulting to true");
+                }
+                boolean waitForBridgeReady = section.getBoolean("wait-for-bridge-ready", true);
+                if (!waitForBridgeReady && !section.contains("expected-startup-seconds")) {
+                    plugin.getLogger().warning("Game '" + id + "' disabled bridge-ready but missing expected-startup-seconds, defaulting to 120");
+                }
+                int expectedStartupSeconds = Math.max(1, section.getInt("expected-startup-seconds", 120));
 
                 // Validate required fields
                 if (id == null || id.isEmpty()) {
@@ -169,7 +184,17 @@ public class GamesConfigManager {
                 }
 
                 // Create game config
-                GameConfig game = new GameConfig(id, name, description, material, customModelData, cloudnetTask);
+                GameConfig game = new GameConfig(
+                    id,
+                    name,
+                    description,
+                    material,
+                    customModelData,
+                    cloudnetTask,
+                    version,
+                    waitForBridgeReady,
+                    expectedStartupSeconds
+                );
                 games.add(game);
 
                 plugin.getLogger().info("Loaded game: " + id + " (" + name + ")" +

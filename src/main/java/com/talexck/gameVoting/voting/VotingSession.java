@@ -23,7 +23,7 @@ public class VotingSession {
     private BukkitTask countdownTask;
     private Runnable onEndCallback;
     private long startTime;
-    private int durationMinutes;
+    private int durationSeconds;
 
     // Ready system state
     private boolean readyPhase;  // True when voting ended, waiting for players to ready up
@@ -41,8 +41,8 @@ public class VotingSession {
     // Pre-voting ready phase (before voting starts)
     private boolean preVotingReady;  // True when waiting for players to trigger voting
     private final Set<UUID> preVotingReadyPlayers;  // Players who marked ready to start voting
-    private int requiredPlayers = 6;  // Minimum players required to start voting
-    private int pendingVotingDuration = 3;  // Duration to use when voting actually starts
+    private int requiredPlayers = 4;  // Minimum players required to start voting
+    private int pendingVotingDurationSeconds = 60;  // Duration to use when voting actually starts
 
     private VotingSession() {
         this.active = false;
@@ -52,7 +52,7 @@ public class VotingSession {
         this.countdownTask = null;
         this.onEndCallback = null;
         this.startTime = 0;
-        this.durationMinutes = 0;
+        this.durationSeconds = 0;
         this.readyPhase = false;
         this.readyPlayers = new HashSet<>();
         this.voteStarter = null;
@@ -80,17 +80,17 @@ public class VotingSession {
      * Start a new voting session with a timer and countdown display.
      * Clears all previous votes.
      *
-     * @param durationMinutes Duration in minutes
+     * @param durationSeconds Duration in seconds
      * @param plugin Plugin instance for scheduling
      * @param callback Callback to execute when voting ends
      */
-    public void startVoting(int durationMinutes, org.bukkit.plugin.Plugin plugin, Runnable callback) {
+    public void startVoting(int durationSeconds, org.bukkit.plugin.Plugin plugin, Runnable callback) {
         active = true;
         playerVotes.clear();
         voteCounts.clear();
         this.onEndCallback = callback;
         this.startTime = System.currentTimeMillis();
-        this.durationMinutes = durationMinutes;
+        this.durationSeconds = durationSeconds;
 
         // Cancel existing timers if any
         if (timerTask != null) {
@@ -101,7 +101,7 @@ public class VotingSession {
         }
 
         // Schedule automatic end
-        long ticks = durationMinutes * 60L * 20L; // Convert minutes to ticks
+        long ticks = durationSeconds * 20L; // Convert seconds to ticks
         timerTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (active) {
                 if (onEndCallback != null) {
@@ -111,7 +111,7 @@ public class VotingSession {
         }, ticks);
 
         // Start countdown display task (runs every second)
-        VotingCountdownTask countdownDisplay = new VotingCountdownTask(this, durationMinutes);
+        VotingCountdownTask countdownDisplay = new VotingCountdownTask(this, durationSeconds);
         countdownTask = countdownDisplay.runTaskTimer(plugin, 0L, 20L);
     }
 
@@ -124,7 +124,7 @@ public class VotingSession {
         playerVotes.clear();
         voteCounts.clear();
         this.startTime = System.currentTimeMillis();
-        this.durationMinutes = 0;
+        this.durationSeconds = 0;
     }
 
     /**
@@ -167,11 +167,11 @@ public class VotingSession {
      * @return Remaining seconds, or 0 if not active or no timer
      */
     public int getRemainingSeconds() {
-        if (!active || durationMinutes == 0) {
+        if (!active || durationSeconds == 0) {
             return 0;
         }
         long elapsed = (System.currentTimeMillis() - startTime) / 1000;
-        long total = durationMinutes * 60L;
+        long total = durationSeconds;
         return (int) Math.max(0, total - elapsed);
     }
 
@@ -420,6 +420,15 @@ public class VotingSession {
      */
     public int getReadyCount() {
         return readyPlayers.size();
+    }
+
+    /**
+     * Get a copy of all players who marked ready.
+     *
+     * @return Ready player UUID set
+     */
+    public Set<UUID> getReadyPlayers() {
+        return new HashSet<>(readyPlayers);
     }
 
     /**
@@ -684,19 +693,18 @@ public class VotingSession {
     /**
      * Get the pending voting duration.
      *
-     * @return Pending voting duration in minutes
+     * @return Pending voting duration in seconds
      */
     public int getPendingVotingDuration() {
-        return pendingVotingDuration;
+        return pendingVotingDurationSeconds;
     }
     
     /**
      * Set the pending voting duration.
      *
-     * @param duration Voting duration in minutes
+     * @param durationSeconds Voting duration in seconds
      */
-    public void setPendingVotingDuration(int duration) {
-        this.pendingVotingDuration = duration;
+    public void setPendingVotingDuration(int durationSeconds) {
+        this.pendingVotingDurationSeconds = durationSeconds;
     }
 }
-
