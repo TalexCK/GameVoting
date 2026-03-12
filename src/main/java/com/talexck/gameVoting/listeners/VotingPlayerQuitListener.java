@@ -1,5 +1,7 @@
 package com.talexck.gameVoting.listeners;
 
+import com.talexck.gameVoting.GameVoting;
+import com.talexck.gameVoting.ui.VotingUI;
 import com.talexck.gameVoting.voting.VotingSession;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -25,6 +27,12 @@ public class VotingPlayerQuitListener implements Listener {
             int onlineCount = Bukkit.getOnlinePlayers().size();
             int requiredPlayers = session.getRequiredPlayers();
 
+            if (session.isActive()) {
+                VotingUI.refreshOpenVotingUIs();
+                refreshVotingHolograms();
+                return;
+            }
+
             // Only update if no voting is active and player count dropped below required threshold
             if (!session.isActive() && !session.isPreVotingReady() && !session.isReadyPhase()) {
                 if (onlineCount < requiredPlayers && onlineCount > 0) {
@@ -35,5 +43,17 @@ public class VotingPlayerQuitListener implements Listener {
                 }
             }
         }, 1L);
+    }
+
+    private void refreshVotingHolograms() {
+        GameVoting plugin = GameVoting.getInstance();
+        if (plugin == null || plugin.getHologramConfigManager() == null || plugin.getHologramDisplayManager() == null) {
+            return;
+        }
+
+        plugin.getHologramDisplayManager().updateAllHolograms(
+            com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.VOTING_ACTIVE,
+            plugin.getHologramConfigManager().getAllLocations()
+        );
     }
 }

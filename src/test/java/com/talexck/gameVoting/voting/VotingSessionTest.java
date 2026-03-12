@@ -69,6 +69,7 @@ class VotingSessionTest {
         assertFalse(session.isActive(), "Session should not be active initially");
         assertFalse(session.isReadyPhase(), "Should not be in ready phase initially");
         assertFalse(session.isPreVotingReady(), "Should not be in pre-voting ready phase initially");
+        assertEquals(2, session.getRequiredPlayers(), "Default required player count should now be 2");
     }
 
     @Test
@@ -223,6 +224,20 @@ class VotingSessionTest {
         session.startVoting();
         String winner = session.getWinner();
         assertNull(winner, "Should return null when no votes");
+    }
+
+    @Test
+    @DisplayName("Should keep locked winner during ready phase")
+    void testLockedWinnerOverridesVoteCounts() {
+        session.startVoting();
+
+        session.vote(player1, game1);
+        session.vote(player2, game1);
+        session.vote(player1, game2);
+
+        session.setLockedWinner("game2");
+
+        assertEquals("game2", session.getWinner(), "Locked winner should take precedence over live vote counts");
     }
 
     @Test

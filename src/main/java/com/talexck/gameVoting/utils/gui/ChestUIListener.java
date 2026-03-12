@@ -97,6 +97,13 @@ public class ChestUIListener implements Listener {
         activeMenus.remove(player.getUniqueId());
     }
 
+    public static ChestUI getActiveMenu(Player player) {
+        if (player == null) {
+            return null;
+        }
+        return activeMenus.get(player.getUniqueId());
+    }
+
     public static void clearAll() {
         activeMenus.clear();
     }

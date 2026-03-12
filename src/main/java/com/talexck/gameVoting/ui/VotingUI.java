@@ -18,7 +18,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -51,14 +50,12 @@ public class VotingUI extends ChestUI {
     private static final int NEXT_SLOT = 52;
 
     private final Player player;
-    private final GamesConfigManager gamesManager;
     private final List<GameConfig> games;
     private int currentPage;
 
     public VotingUI(Player player, GamesConfigManager gamesManager) {
         super(ColorUtil.stripColors(com.talexck.gameVoting.utils.language.LanguageManager.getInstance().getMessage("ui.voting_title")), ROWS);
         this.player = player;
-        this.gamesManager = gamesManager;
         this.games = gamesManager.getGames();
         this.currentPage = 0;
 
@@ -121,6 +118,23 @@ public class VotingUI extends ChestUI {
             getInventory().setItem(slot, new ItemStack(Material.AIR));
         }
 
+        if (games.isEmpty()) {
+            ItemStack emptyItem = new ItemStack(Material.BARRIER);
+            ItemMeta meta = emptyItem.getItemMeta();
+            if (meta != null) {
+                meta.displayName(ColorUtil.colorize(
+                    com.talexck.gameVoting.utils.language.LanguageManager.getInstance().getMessage("ui.no_available_games")));
+                emptyItem.setItemMeta(meta);
+            }
+            setItem(CONTENT_SLOTS[ITEMS_PER_PAGE / 2], ClickableItem.of(emptyItem, p -> {}));
+            return;
+        }
+
+        int totalPages = getTotalPages();
+        if (currentPage >= totalPages) {
+            currentPage = totalPages - 1;
+        }
+
         // Calculate page bounds
         int start = currentPage * ITEMS_PER_PAGE;
         int end = Math.min(start + ITEMS_PER_PAGE, games.size());
@@ -173,12 +187,25 @@ public class VotingUI extends ChestUI {
             VotingSession session = VotingSession.getInstance();
             boolean voted = session.hasVotedFor(player, game.getId());
             int voteCount = session.getPlayerVoteCount(player);
+            boolean available = game.isAvailableForPlayerCount(Bukkit.getOnlinePlayers().size());
 
             lore.add(Component.text(""));
             if (voted) {
                 lore.add(ColorUtil.colorize(langManager.getMessage("ui.voted_indicator")));
+                if (!available) {
+                    Map<String, String> placeholders = new HashMap<>();
+                    placeholders.put("min", String.valueOf(game.getMinPlayers()));
+                    placeholders.put("max", String.valueOf(game.getMaxPlayers()));
+                    lore.add(ColorUtil.colorize(langManager.getMessage("ui.game_temporarily_disabled", placeholders)));
+                    lore.add(ColorUtil.colorize(langManager.getMessage("ui.click_to_unvote")));
+                }
             } else {
-                if (voteCount < 3) {
+                if (!available) {
+                    Map<String, String> placeholders = new HashMap<>();
+                    placeholders.put("min", String.valueOf(game.getMinPlayers()));
+                    placeholders.put("max", String.valueOf(game.getMaxPlayers()));
+                    lore.add(ColorUtil.colorize(langManager.getMessage("ui.game_temporarily_disabled", placeholders)));
+                } else if (voteCount < 3) {
                     lore.add(ColorUtil.colorize(langManager.getMessage("ui.click_to_vote")));
                 } else {
                     lore.add(ColorUtil.colorize(langManager.getMessage("ui.vote_limit_reached")));
@@ -216,10 +243,25 @@ public class VotingUI extends ChestUI {
     private void handleVote(GameConfig game) {
         VotingSession session = VotingSession.getInstance();
         var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+        int onlineCount = Bukkit.getOnlinePlayers().size();
 
         if (!session.isActive()) {
             MessageUtil.sendMessage(player, langManager.getMessage("ui.voting_inactive"));
             player.closeInventory();
+            return;
+        }
+
+        boolean voted = session.hasVotedFor(player, game.getId());
+        if (!voted && !game.isAvailableForPlayerCount(onlineCount)) {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("game", game.getName());
+            placeholders.put("min", String.valueOf(game.getMinPlayers()));
+            placeholders.put("max", String.valueOf(game.getMaxPlayers()));
+            placeholders.put("current", String.valueOf(onlineCount));
+            MessageUtil.sendMessage(player, langManager.getMessage("ui.game_unavailable_for_player_count", placeholders));
+            updateContent();
+            updateNavigation();
+            player.updateInventory();
             return;
         }
 
@@ -255,7 +297,23 @@ public class VotingUI extends ChestUI {
 
         // Refresh the UI to show updated vote indicator
         updateContent();
+        updateNavigation();
         player.updateInventory();
+    }
+
+    public void refreshState() {
+        updateContent();
+        updateNavigation();
+    }
+
+    public static void refreshOpenVotingUIs() {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!(ChestUIListener.getActiveMenu(online) instanceof VotingUI votingUI)) {
+                continue;
+            }
+            votingUI.refreshState();
+            online.updateInventory();
+        }
     }
 
     private void warnVersionMismatchOnVote(GameConfig game) {

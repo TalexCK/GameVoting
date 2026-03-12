@@ -1,6 +1,7 @@
 package com.talexck.gameVoting.listeners;
 
 import com.talexck.gameVoting.GameVoting;
+import com.talexck.gameVoting.ui.VotingUI;
 import com.talexck.gameVoting.voting.VotingSession;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -10,6 +11,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Listener for player join events.
@@ -39,9 +43,12 @@ public class PlayerJoinListener implements Listener {
             } else if (session.isActive()) {
                 // Voting is active - give compass
                 com.talexck.gameVoting.utils.item.VoteItem.giveVotingItem(player);
+                VotingUI.refreshOpenVotingUIs();
+                refreshVotingHolograms();
             } else if (session.isReadyPhase()) {
-                // In ready phase after voting - give gray dye (not ready yet)
-                com.talexck.gameVoting.utils.item.VoteItem.giveReadyItem(player);
+                // 准备阶段默认已准备：加入即绿色状态
+                session.markPlayerReady(player.getUniqueId());
+                com.talexck.gameVoting.utils.item.VoteItem.updateReadyItem(player, true);
             } else {
                 // No voting active - give appropriate waiting item based on player count
                 if (onlineCount >= requiredPlayers) {
@@ -53,7 +60,9 @@ public class PlayerJoinListener implements Listener {
                         for (Player online : Bukkit.getOnlinePlayers()) {
                             com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
                         }
-                        com.talexck.gameVoting.utils.message.MessageUtil.broadcastTranslated("ready.reached_min_players_start");
+                        Map<String, String> placeholders = new HashMap<>();
+                        placeholders.put("required", String.valueOf(requiredPlayers));
+                        com.talexck.gameVoting.utils.message.MessageUtil.broadcastTranslated("ready.reached_min_players_start", placeholders);
                     }
                 } else {
                     // Not enough players - give redstone block
@@ -66,6 +75,18 @@ public class PlayerJoinListener implements Listener {
                 GameVoting.getInstance().getProxyVersionBridge().requestPlayerVersion(player, player.getUniqueId());
             }
         }, 1L);
+    }
+
+    private void refreshVotingHolograms() {
+        GameVoting plugin = GameVoting.getInstance();
+        if (plugin == null || plugin.getHologramConfigManager() == null || plugin.getHologramDisplayManager() == null) {
+            return;
+        }
+
+        plugin.getHologramDisplayManager().updateAllHolograms(
+            com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.VOTING_ACTIVE,
+            plugin.getHologramConfigManager().getAllLocations()
+        );
     }
 
     @EventHandler

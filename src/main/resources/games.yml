@@ -3,6 +3,8 @@
 # 每个游戏都需要配置传送策略：
 # wait-for-bridge-ready: true  -> 等待 CloudNet Bridge 就绪后传送
 # wait-for-bridge-ready: false -> 按 expected-startup-seconds 延迟后传送
+# min_player / max_player      -> 仅当大厅人数在这个范围内时，才允许投票该游戏
+# 未设置时默认 min_player=1, max_player=50
 
 games:
   - id: "bedwars"
@@ -16,6 +18,8 @@ games:
     version: "1.20.1"
     wait-for-bridge-ready: true
     expected-startup-seconds: 120
+    min_player: 1
+    max_player: 50
 
   - id: "skywars"
     name: "&b&lSkyWars"
@@ -28,3 +32,5 @@ games:
     version: "1.20.1"
     wait-for-bridge-ready: true
     expected-startup-seconds: 120
+    min_player: 1
+    max_player: 50

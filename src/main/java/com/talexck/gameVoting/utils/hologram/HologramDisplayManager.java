@@ -185,8 +185,13 @@ public class HologramDisplayManager {
         lines.add(langManager.getMessage("hologram.available_games"));
         lines.add("");
 
-        for (GameConfig game : gamesManager.getGames()) {
+        List<GameConfig> availableGames = gamesManager.getAvailableGames(Bukkit.getOnlinePlayers().size());
+        for (GameConfig game : availableGames) {
             lines.add("&f• &e" + game.getName());
+        }
+
+        if (availableGames.isEmpty()) {
+            lines.add(langManager.getMessage("hologram.no_available_games"));
         }
 
         lines.add("");
