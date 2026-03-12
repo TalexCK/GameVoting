@@ -2,6 +2,7 @@ package com.talexck.gameVoting.velocity;
 
 import com.google.inject.Inject;
 import com.talexck.gameVoting.velocity.commands.GameInfoCommand;
+import com.talexck.gameVoting.velocity.commands.PingCommand;
 import com.talexck.gameVoting.velocity.commands.ProxyHelpCommand;
 import com.talexck.gameVoting.velocity.config.BridgeConfig;
 import com.talexck.gameVoting.velocity.config.BridgeConfigLoader;
@@ -53,6 +54,7 @@ public final class GameVotingVelocityBridge {
     private volatile BridgeConfig bridgeConfig;
     private CommandMeta gameCommandMeta;
     private CommandMeta helpCommandMeta;
+    private CommandMeta pingCommandMeta;
 
     @Inject
     public GameVotingVelocityBridge(ProxyServer proxyServer, Logger logger, @DataDirectory Path dataDirectory) {
@@ -167,6 +169,13 @@ public final class GameVotingVelocityBridge {
             .build();
         commandManager.register(helpCommandMeta, new ProxyHelpCommand(this::currentConfig));
 
+        // 覆盖全局 /ping
+        commandManager.unregister("ping");
+        pingCommandMeta = commandManager.metaBuilder("ping")
+            .plugin(this)
+            .build();
+        commandManager.register(pingCommandMeta, new PingCommand(proxyServer));
+
         gameCommandMeta = commandManager.metaBuilder("game")
             .plugin(this)
             .build();
@@ -179,6 +188,9 @@ public final class GameVotingVelocityBridge {
         }
         if (gameCommandMeta != null) {
             commandManager.unregister(gameCommandMeta);
+        }
+        if (pingCommandMeta != null) {
+            commandManager.unregister(pingCommandMeta);
         }
     }
 

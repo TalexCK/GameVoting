@@ -41,8 +41,9 @@ public class VotingSession {
     // Pre-voting ready phase (before voting starts)
     private boolean preVotingReady;  // True when waiting for players to trigger voting
     private final Set<UUID> preVotingReadyPlayers;  // Players who marked ready to start voting
-    private int requiredPlayers = 4;  // Minimum players required to start voting
+    private int requiredPlayers = 2;  // Minimum players required to start voting
     private int pendingVotingDurationSeconds = 60;  // Duration to use when voting actually starts
+    private String lockedWinnerId;  // Final winner fixed after voting ends
 
     private VotingSession() {
         this.active = false;
@@ -62,6 +63,7 @@ public class VotingSession {
         this.currentGameService = null;
         this.preVotingReady = false;
         this.preVotingReadyPlayers = new HashSet<>();
+        this.lockedWinnerId = null;
     }
 
     /**
@@ -88,6 +90,7 @@ public class VotingSession {
         active = true;
         playerVotes.clear();
         voteCounts.clear();
+        lockedWinnerId = null;
         this.onEndCallback = callback;
         this.startTime = System.currentTimeMillis();
         this.durationSeconds = durationSeconds;
@@ -123,6 +126,7 @@ public class VotingSession {
         active = true;
         playerVotes.clear();
         voteCounts.clear();
+        lockedWinnerId = null;
         this.startTime = System.currentTimeMillis();
         this.durationSeconds = 0;
     }
@@ -181,10 +185,22 @@ public class VotingSession {
      * @return The game ID with most votes, or null if no votes
      */
     public String getWinner() {
+        if (lockedWinnerId != null) {
+            return lockedWinnerId;
+        }
         return voteCounts.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey)
                 .orElse(null);
+    }
+
+    /**
+     * Lock the winner after voting ends so ready phase logic stays stable.
+     *
+     * @param gameId final winner id, null to clear
+     */
+    public void setLockedWinner(String gameId) {
+        this.lockedWinnerId = gameId;
     }
 
     /**
@@ -353,6 +369,7 @@ public class VotingSession {
         active = false;
         playerVotes.clear();
         voteCounts.clear();
+        lockedWinnerId = null;
         readyPhase = false;
         readyPlayers.clear();
         voteStarter = null;

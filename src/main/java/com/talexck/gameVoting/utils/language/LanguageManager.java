@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -22,6 +23,7 @@ public class LanguageManager {
     private final Plugin plugin;
     private final Logger logger;
     private final Map<String, FileConfiguration> languages;
+    private final Map<String, FileConfiguration> bundledLanguages;
     private String currentLanguage;
     private FileConfiguration currentConfig;
 
@@ -32,6 +34,7 @@ public class LanguageManager {
         this.plugin = plugin;
         this.logger = plugin.getLogger();
         this.languages = new HashMap<>();
+        this.bundledLanguages = new HashMap<>();
         this.currentLanguage = DEFAULT_LANGUAGE;
     }
 
@@ -72,6 +75,11 @@ public class LanguageManager {
         // Copy default language files from resources
         for (String lang : SUPPORTED_LANGUAGES) {
             File langFile = new File(langFolder, lang + ".yml");
+            FileConfiguration bundledConfig = loadBundledLanguage(lang);
+            if (bundledConfig != null) {
+                bundledLanguages.put(lang, bundledConfig);
+            }
+
             if (!langFile.exists()) {
                 try (InputStream in = plugin.getResource("lang/" + lang + ".yml")) {
                     if (in != null) {
@@ -86,6 +94,9 @@ public class LanguageManager {
             // Load language file
             if (langFile.exists()) {
                 FileConfiguration config = YamlConfiguration.loadConfiguration(langFile);
+                if (bundledConfig != null && mergeMissingKeys(config, bundledConfig)) {
+                    saveLanguageFile(config, langFile, lang);
+                }
                 languages.put(lang, config);
                 logger.info("Loaded language: " + lang);
             }
@@ -150,6 +161,20 @@ public class LanguageManager {
             }
         }
 
+        if (message == null) {
+            FileConfiguration bundledConfig = bundledLanguages.get(currentLanguage);
+            if (bundledConfig != null) {
+                message = bundledConfig.getString(key);
+            }
+        }
+
+        if (message == null) {
+            FileConfiguration bundledDefaultConfig = bundledLanguages.get(DEFAULT_LANGUAGE);
+            if (bundledDefaultConfig != null) {
+                message = bundledDefaultConfig.getString(key);
+            }
+        }
+
         return message != null ? message : key;
     }
 
@@ -209,6 +234,44 @@ public class LanguageManager {
      */
     public void reload() {
         languages.clear();
+        bundledLanguages.clear();
         loadLanguages();
+    }
+
+    private FileConfiguration loadBundledLanguage(String lang) {
+        try (InputStream in = plugin.getResource("lang/" + lang + ".yml")) {
+            if (in == null) {
+                logger.warning("Bundled language resource not found: " + lang + ".yml");
+                return null;
+            }
+            return YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            logger.severe("Failed to read bundled language file: " + lang + ".yml - " + e.getMessage());
+            return null;
+        }
+    }
+
+    private boolean mergeMissingKeys(FileConfiguration target, FileConfiguration source) {
+        boolean changed = false;
+        Set<String> keys = source.getKeys(true);
+        for (String key : keys) {
+            if (source.isConfigurationSection(key)) {
+                continue;
+            }
+            if (!target.contains(key)) {
+                target.set(key, source.get(key));
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private void saveLanguageFile(FileConfiguration config, File langFile, String lang) {
+        try {
+            config.save(langFile);
+            logger.info("Updated language file with missing keys: " + lang + ".yml");
+        } catch (IOException e) {
+            logger.severe("Failed to update language file: " + lang + ".yml - " + e.getMessage());
+        }
     }
 }

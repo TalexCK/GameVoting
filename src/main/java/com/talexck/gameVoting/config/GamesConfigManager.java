@@ -18,6 +18,9 @@ import java.util.Map;
  * Manager for loading and managing game configurations from games.yml.
  */
 public class GamesConfigManager {
+    private static final int DEFAULT_MIN_PLAYERS = 1;
+    private static final int DEFAULT_MAX_PLAYERS = 50;
+
     private final GameVoting plugin;
     private final File configFile;
     private FileConfiguration config;
@@ -83,6 +86,8 @@ public class GamesConfigManager {
         bedwars.set("version", "1.20.1");
         bedwars.set("wait-for-bridge-ready", true);
         bedwars.set("expected-startup-seconds", 120);
+        bedwars.set("min_player", DEFAULT_MIN_PLAYERS);
+        bedwars.set("max_player", DEFAULT_MAX_PLAYERS);
         defaultGames.add(bedwars);
 
         // SkyWars
@@ -98,6 +103,8 @@ public class GamesConfigManager {
         skywars.set("version", "1.20.1");
         skywars.set("wait-for-bridge-ready", true);
         skywars.set("expected-startup-seconds", 120);
+        skywars.set("min_player", DEFAULT_MIN_PLAYERS);
+        skywars.set("max_player", DEFAULT_MAX_PLAYERS);
         defaultGames.add(skywars);
 
         config.set("games", defaultGames);
@@ -154,14 +161,17 @@ public class GamesConfigManager {
                 int customModelData = section.getInt("custom-model-data", 0);
                 String cloudnetTask = section.getString("cloudnet-task");
                 String version = section.getString("version");
-                if (!section.contains("wait-for-bridge-ready")) {
-                    plugin.getLogger().warning("Game '" + id + "' missing wait-for-bridge-ready, defaulting to true");
-                }
-                boolean waitForBridgeReady = section.getBoolean("wait-for-bridge-ready", true);
+                boolean waitForBridgeReady = parseBooleanConfig(section, "wait-for-bridge-ready", true, id);
+                int expectedStartupSeconds = Math.max(1, parseIntConfig(section, "expected-startup-seconds", 120, id));
+                int minPlayers = Math.max(1, parseIntConfig(section, "min_player", DEFAULT_MIN_PLAYERS, id));
+                int maxPlayers = parseIntConfig(section, "max_player", DEFAULT_MAX_PLAYERS, id);
                 if (!waitForBridgeReady && !section.contains("expected-startup-seconds")) {
                     plugin.getLogger().warning("Game '" + id + "' disabled bridge-ready but missing expected-startup-seconds, defaulting to 120");
                 }
-                int expectedStartupSeconds = Math.max(1, section.getInt("expected-startup-seconds", 120));
+                if (maxPlayers < minPlayers) {
+                    plugin.getLogger().warning("Game '" + id + "' has max_player < min_player, adjusting max_player to " + minPlayers);
+                    maxPlayers = minPlayers;
+                }
 
                 // Validate required fields
                 if (id == null || id.isEmpty()) {
@@ -193,7 +203,9 @@ public class GamesConfigManager {
                     cloudnetTask,
                     version,
                     waitForBridgeReady,
-                    expectedStartupSeconds
+                    expectedStartupSeconds,
+                    minPlayers,
+                    maxPlayers
                 );
                 games.add(game);
 
@@ -219,6 +231,18 @@ public class GamesConfigManager {
     }
 
     /**
+     * Get all games that are votable for the current lobby size.
+     *
+     * @param playerCount current online player count
+     * @return votable games
+     */
+    public List<GameConfig> getAvailableGames(int playerCount) {
+        return games.stream()
+                .filter(game -> game.isAvailableForPlayerCount(playerCount))
+                .toList();
+    }
+
+    /**
      * Get a game configuration by its ID.
      *
      * @param id The game ID
@@ -229,6 +253,18 @@ public class GamesConfigManager {
                 .filter(game -> game.getId().equalsIgnoreCase(id))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Whether a game can be voted for with the current lobby size.
+     *
+     * @param gameId game id
+     * @param playerCount current online player count
+     * @return true if available
+     */
+    public boolean isGameAvailable(String gameId, int playerCount) {
+        GameConfig game = getGame(gameId);
+        return game != null && game.isAvailableForPlayerCount(playerCount);
     }
 
     /**
@@ -247,5 +283,68 @@ public class GamesConfigManager {
      */
     public int getGameCount() {
         return games.size();
+    }
+
+    /**
+     * Get the number of votable games for the current lobby size.
+     *
+     * @param playerCount current online player count
+     * @return votable game count
+     */
+    public int getAvailableGameCount(int playerCount) {
+        return getAvailableGames(playerCount).size();
+    }
+
+    /**
+     * Parse boolean from config path with string compatibility.
+     * Accepts true/false boolean and "true"/"false" string values.
+     */
+    private boolean parseBooleanConfig(ConfigurationSection section, String path, boolean defaultValue, String gameId) {
+        if (!section.contains(path)) {
+            plugin.getLogger().warning("Game '" + gameId + "' missing " + path + ", defaulting to " + defaultValue);
+            return defaultValue;
+        }
+
+        Object value = section.get(path);
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        if (value instanceof String stringValue) {
+            String normalized = stringValue.trim();
+            if ("true".equalsIgnoreCase(normalized)) {
+                return true;
+            }
+            if ("false".equalsIgnoreCase(normalized)) {
+                return false;
+            }
+        }
+
+        plugin.getLogger().warning("Game '" + gameId + "' has invalid " + path + "='" + value + "', defaulting to " + defaultValue);
+        return defaultValue;
+    }
+
+    /**
+     * Parse integer from config path with string compatibility.
+     * Accepts numeric values and numeric strings.
+     */
+    private int parseIntConfig(ConfigurationSection section, String path, int defaultValue, String gameId) {
+        if (!section.contains(path)) {
+            return defaultValue;
+        }
+
+        Object value = section.get(path);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String stringValue) {
+            try {
+                return Integer.parseInt(stringValue.trim());
+            } catch (NumberFormatException ignored) {
+                // fall through to warning below
+            }
+        }
+
+        plugin.getLogger().warning("Game '" + gameId + "' has invalid " + path + "='" + value + "', defaulting to " + defaultValue);
+        return defaultValue;
     }
 }

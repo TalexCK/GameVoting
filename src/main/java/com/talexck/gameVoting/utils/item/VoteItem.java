@@ -12,6 +12,8 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Utility class for managing the vote hotbar item.
@@ -37,6 +39,9 @@ public class VoteItem {
      */
     public static void giveInsufficientPlayersItem(Player player) {
         var langManager = com.talexck.gameVoting.utils.language.LanguageManager.getInstance();
+        int requiredPlayers = com.talexck.gameVoting.voting.VotingSession.getInstance().getRequiredPlayers();
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("required", String.valueOf(requiredPlayers));
         ItemStack item = new ItemStack(Material.REDSTONE_BLOCK);
         ItemMeta meta = item.getItemMeta();
 
@@ -45,8 +50,8 @@ public class VoteItem {
             meta.setLore(Arrays.asList(
                 ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_1")),
                 ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_2")),
-                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_3")),
-                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_4"))
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_3", placeholders)),
+                ChatColor.translateAlternateColorCodes('&', langManager.getMessage("item.insufficient_players_lore_4", placeholders))
             ));
 
             // Add glowing effect

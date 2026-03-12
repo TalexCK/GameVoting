@@ -26,8 +26,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class VoteCommand implements CommandExecutor {
@@ -35,6 +38,7 @@ public class VoteCommand implements CommandExecutor {
     private GamesConfigManager gamesManager;
     private static final int DEFAULT_VOTING_DURATION_SECONDS = 60; // 1 minute
     private static final int BRIDGE_READY_CHECK_INTERVAL_TICKS = 20; // 1 second
+    private static final int TELEPORT_DELAY_AFTER_READY_SECONDS = 60;
     
     // Store a snapshot of lobby players for delayed teleport
     private Set<UUID> playersToTeleport = new HashSet<>();
@@ -295,21 +299,7 @@ public class VoteCommand implements CommandExecutor {
         // Stop voting manually (won't trigger auto-start)
         Map<String, Integer> results = session.stopVoting();
         broadcastResults(results);
-
-        // Give appropriate items based on player count (replace compass with redstone block/emerald)
-        int onlineCount = Bukkit.getOnlinePlayers().size();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            // First remove the old vote item (compass or ready item)
-            com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
-
-            if (onlineCount >= VotingSession.getInstance().getRequiredPlayers()) {
-                // Enough players - give start voting item (emerald)
-                com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
-            } else {
-                // Not enough players - give insufficient players item (redstone block)
-                com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(online);
-            }
-        }
+        restoreLobbyVoteItems();
 
         // Update hologram displays to show NOT_VOTING state (popular games)
         updateHologramDisplays();
@@ -368,17 +358,20 @@ public class VoteCommand implements CommandExecutor {
         broadcastResults(results);
 
         // Get winner game ID
-        String winnerId = session.getWinner();
+        int onlineCount = Bukkit.getOnlinePlayers().size();
+        String winnerId = findEligibleWinner(results, onlineCount);
         if (winnerId == null) {
-            MessageUtil.broadcastTranslated("voting.no_votes_cast");
+            if (results.isEmpty()) {
+                MessageUtil.broadcastTranslated("voting.no_votes_cast");
+            } else {
+                broadcastNoEligibleGames(onlineCount);
+            }
             clearPreStartedService();
             session.clear();
-            // Remove vote items from all players
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
-            }
+            restoreLobbyVoteItems();
             return;
         }
+        session.setLockedWinner(winnerId);
 
         // Get winner GameConfig
         GameConfig winner = gamesManager.getGame(winnerId);
@@ -386,9 +379,7 @@ public class VoteCommand implements CommandExecutor {
             MessageUtil.broadcastTranslated("voting.winner_not_found");
             clearPreStartedService();
             session.clear();
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
-            }
+            restoreLobbyVoteItems();
             return;
         }
 
@@ -401,9 +392,10 @@ public class VoteCommand implements CommandExecutor {
         // Update holograms to show vote results
         updateHologramDisplays();
 
-        // Give ready items to all players
+        // 准备阶段默认全员已准备，显示绿色已准备物品
         for (Player online : Bukkit.getOnlinePlayers()) {
-            com.talexck.gameVoting.utils.item.VoteItem.giveReadyItem(online);
+            session.markPlayerReady(online.getUniqueId());
+            com.talexck.gameVoting.utils.item.VoteItem.updateReadyItem(online, true);
         }
 
         // Announce ready phase
@@ -420,6 +412,16 @@ public class VoteCommand implements CommandExecutor {
         MessageUtil.broadcastTranslated("ready.instructions_3");
         MessageUtil.broadcast("");
         MessageUtil.broadcastTranslated("general.separator");
+
+        // 默认全员已准备，直接进入开始倒计时（玩家可右键取消准备来中断）
+        if (session.allPlayersReady()) {
+            MessageUtil.broadcastTranslated("ready.all_ready_countdown");
+            session.startCountdown(GameVoting.getInstance(), () -> {
+                Bukkit.getScheduler().runTask(GameVoting.getInstance(), () -> {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "vote gamestart");
+                });
+            });
+        }
     }
 
     /**
@@ -582,13 +584,14 @@ public class VoteCommand implements CommandExecutor {
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("game", game.getName());
-        placeholders.put("time", String.valueOf(expectedStartupSeconds));
 
         MessageUtil.broadcast("");
         if (waitBridgeReady) {
+            placeholders.put("time", String.valueOf(TELEPORT_DELAY_AFTER_READY_SECONDS));
             MessageUtil.broadcastTranslated("game.teleporting_when_ready", placeholders);
-            waitForServiceReadyAndTeleport(serviceName, game, BRIDGE_READY_CHECK_INTERVAL_TICKS);
+            waitForServiceReadyAndTeleport(serviceName, game, BRIDGE_READY_CHECK_INTERVAL_TICKS, TELEPORT_DELAY_AFTER_READY_SECONDS);
         } else {
+            placeholders.put("time", String.valueOf(expectedStartupSeconds));
             MessageUtil.broadcastTranslated("game.teleporting_in", placeholders);
             startTeleportCountdown(serviceName, game, expectedStartupSeconds);
         }
@@ -601,8 +604,9 @@ public class VoteCommand implements CommandExecutor {
      * @param serviceName Service name
      * @param game Game config
      * @param checkIntervalTicks Poll interval in ticks
+     * @param delayAfterReadySeconds Delay before teleport once service is ready
      */
-    private void waitForServiceReadyAndTeleport(String serviceName, GameConfig game, int checkIntervalTicks) {
+    private void waitForServiceReadyAndTeleport(String serviceName, GameConfig game, int checkIntervalTicks, int delayAfterReadySeconds) {
         final int[] taskIdHolder = new int[1];
 
         taskIdHolder[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -625,20 +629,34 @@ public class VoteCommand implements CommandExecutor {
                 }
 
                 Bukkit.getScheduler().cancelTask(taskIdHolder[0]);
-
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("game", game.getName());
-                String message = com.talexck.gameVoting.utils.language.LanguageManager.getInstance()
-                    .getMessage("teleport.teleporting_now", placeholders);
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    com.talexck.gameVoting.utils.display.ActionBarUtil.sendActionBar(player, message);
-                }
-
-                Bukkit.getScheduler().runTaskLater(plugin, () -> teleportPlayersToService(serviceName, game), 10L);
+                plugin.getLogger().info("Service " + serviceName + " is ready, teleporting in "
+                    + delayAfterReadySeconds + " seconds (no countdown).");
+                scheduleDelayedTeleportWithoutCountdown(serviceName, game, delayAfterReadySeconds);
             } catch (Exception ex) {
                 plugin.getLogger().warning("Failed while polling service readiness for " + serviceName + ": " + ex.getMessage());
             }
         }, 0L, checkIntervalTicks).getTaskId();
+    }
+
+    /**
+     * Schedule teleport after a fixed delay without countdown broadcast.
+     *
+     * @param serviceName Service name
+     * @param game Game config
+     * @param delaySeconds Delay seconds
+     */
+    private void scheduleDelayedTeleportWithoutCountdown(String serviceName, GameConfig game, int delaySeconds) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("game", game.getName());
+            String message = com.talexck.gameVoting.utils.language.LanguageManager.getInstance()
+                .getMessage("teleport.teleporting_now", placeholders);
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                com.talexck.gameVoting.utils.display.ActionBarUtil.sendActionBar(player, message);
+            }
+
+            teleportPlayersToService(serviceName, game);
+        }, delaySeconds * 20L);
     }
 
     /**
@@ -1178,19 +1196,7 @@ public class VoteCommand implements CommandExecutor {
         }
 
         // Give appropriate items based on player count
-        int onlineCount = Bukkit.getOnlinePlayers().size();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            // First remove the old vote item (compass or ready item)
-            com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
-
-            if (onlineCount >= VotingSession.getInstance().getRequiredPlayers()) {
-                // Enough players - give start voting item (emerald)
-                com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
-            } else {
-                // Not enough players - give insufficient players item (redstone block)
-                com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(online);
-            }
-        }
+        restoreLobbyVoteItems();
 
         // Update holograms to NOT_VOTING state
         updateHologramDisplays();
@@ -1498,6 +1504,61 @@ public class VoteCommand implements CommandExecutor {
         }
 
         return seconds;
+    }
+
+    private String findEligibleWinner(Map<String, Integer> results, int playerCount) {
+        return selectRandomWinner(
+            results,
+            gameId -> gamesManager.isGameAvailable(gameId, playerCount),
+            ThreadLocalRandom.current()
+        );
+    }
+
+    static String selectRandomWinner(Map<String, Integer> results, Predicate<String> isAvailable, Random random) {
+        int highestEligibleVotes = Integer.MIN_VALUE;
+        List<String> candidates = new ArrayList<>();
+
+        for (Map.Entry<String, Integer> entry : results.entrySet()) {
+            if (!isAvailable.test(entry.getKey())) {
+                continue;
+            }
+
+            int votes = entry.getValue();
+            if (votes > highestEligibleVotes) {
+                highestEligibleVotes = votes;
+                candidates.clear();
+                candidates.add(entry.getKey());
+            } else if (votes == highestEligibleVotes) {
+                candidates.add(entry.getKey());
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        return candidates.get(random.nextInt(candidates.size()));
+    }
+
+    private void broadcastNoEligibleGames(int onlineCount) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("current", String.valueOf(onlineCount));
+        MessageUtil.broadcastTranslated("voting.no_eligible_games", placeholders);
+    }
+
+    private void restoreLobbyVoteItems() {
+        int onlineCount = Bukkit.getOnlinePlayers().size();
+        int requiredPlayers = VotingSession.getInstance().getRequiredPlayers();
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            com.talexck.gameVoting.utils.item.VoteItem.removeVoteItem(online);
+
+            if (onlineCount >= requiredPlayers) {
+                com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(online);
+            } else {
+                com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(online);
+            }
+        }
     }
 
     /**
