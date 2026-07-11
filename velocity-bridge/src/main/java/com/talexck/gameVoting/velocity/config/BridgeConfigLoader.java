@@ -20,7 +20,11 @@ public final class BridgeConfigLoader {
 
   private static final String CONFIG_FILE_NAME = "config.yml";
   private static final List<String> FALLBACK_HELP_LINES =
-      List.of("&e/game <game> &7- &f查看游戏介绍与规则", "&e/hub &7- &f返回大厅服", "&e/lobby &7- &f返回大厅服");
+      List.of(
+          "&e/game <game> &7- &f查看游戏介绍与规则",
+          "&e/hub &7- &f返回大厅服",
+          "&e/lobby &7- &f返回大厅服",
+          "&e/spawn &7- &f回到出生点");
   private static final List<BridgeConfig.PermissionHelpSection> FALLBACK_PERMISSION_SECTIONS =
       List.of(
           new BridgeConfig.PermissionHelpSection(
@@ -28,8 +32,7 @@ public final class BridgeConfigLoader {
               List.of(
                   "&e/vote &7- &f打开投票菜单（或查看投票帮助）",
                   "&e/vote join [game] &7- &f加入当前游戏或指定游戏",
-                  "&e/vote ready &7- &f在准备阶段标记已就绪",
-                  "&e/vote gamestart &7- &f由本轮发起者强制开局")),
+                  "&e/vote ready &7- &f在准备阶段标记已就绪")),
           new BridgeConfig.PermissionHelpSection(
               "gamevoting.vote.admin",
               List.of(
@@ -37,6 +40,7 @@ public final class BridgeConfigLoader {
                   "&e/vote start [duration] &7- &f开启投票（人数不足时需管理员）",
                   "&e/vote stop &7- &f结束当前投票并展示结果",
                   "&e/vote forcestart <game-id> &7- &f跳过投票直接开局",
+                  "&e/vote gamestart &7- &f由本轮发起者强制开局",
                   "&e/vote stopgame <game-id> &7- &f关闭指定游戏的在线实例",
                   "&e/vote gamelist &7- &f查看各游戏在线实例",
                   "&e/vote session stop &7- &f强制停止当前会话",
@@ -51,42 +55,27 @@ public final class BridgeConfigLoader {
   private static final String DEFAULT_CONFIG =
       """
       # GameVoting Velocity 命令配置
-      games:
-        bedwars:
-          name: "BedWars"
-          aliases: ["bw", "bed"]
-          intro:
-            - "经典团队对抗玩法，保护自己的床并摧毁敌方床。"
-          rules:
-            - "床被摧毁后无法复活。"
-            - "击败所有敌队即可获胜。"
-        skywars:
-          name: "SkyWars"
-          aliases: ["sw", "sky"]
-          intro:
-            - "在空岛上收集资源并击败其他玩家。"
-          rules:
-            - "从箱子中获取装备并快速发育。"
-            - "最后存活的玩家或队伍获胜。"
+      games: {}
 
       help:
         default:
           - "&e/game <game> &7- &f查看游戏介绍与规则"
           - "&e/hub &7- &f返回大厅服"
           - "&e/lobby &7- &f返回大厅服"
+          - "&e/spawn &7- &f回到出生点"
         permission_sections:
           - permission: "gamevoting.vote"
             lines:
               - "&e/vote &7- &f打开投票菜单（或查看投票帮助）"
               - "&e/vote join [game] &7- &f加入当前游戏或指定游戏"
               - "&e/vote ready &7- &f在准备阶段标记已就绪"
-              - "&e/vote gamestart &7- &f由本轮发起者强制开局"
           - permission: "gamevoting.vote.admin"
             lines:
               - "&6[投票管理]"
               - "&e/vote start [duration] &7- &f开启投票（人数不足时需管理员）"
               - "&e/vote stop &7- &f结束当前投票并展示结果"
               - "&e/vote forcestart <game-id> &7- &f跳过投票直接开局"
+              - "&e/vote gamestart &7- &f由本轮发起者强制开局"
               - "&e/vote stopgame <game-id> &7- &f关闭指定游戏的在线实例"
               - "&e/vote gamelist &7- &f查看各游戏在线实例"
               - "&e/vote session stop &7- &f强制停止当前会话"

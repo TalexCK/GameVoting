@@ -17,7 +17,7 @@ public final class SchedulerGameCatalogClient {
 
   private static final String URL_ENV = "SCHEDULER_BRIDGE_URL";
   private static final String TOKEN_ENV = "SCHEDULER_BRIDGE_TOKEN";
-  private static final String GAMES_PATH = "/bridge/v1/games";
+  private static final String GAMES_PATH = "/bridge/v1/games/details";
 
   private final String baseUrl;
   private final String token;
@@ -74,7 +74,7 @@ public final class SchedulerGameCatalogClient {
 
   static BridgeConfig.GameEntry parseGameRecord(String record) throws IOException {
     String[] fields = record.split("\\t", -1);
-    if (fields.length != 12 && fields.length != 17) {
+    if (fields.length != 12 && fields.length != 17 && fields.length != 19) {
       throw new IOException("Scheduler returned an invalid game record");
     }
     try {
@@ -106,6 +106,9 @@ public final class SchedulerGameCatalogClient {
       }
 
       List<String> details = new ArrayList<>();
+      if (fields.length == 19) {
+        addLines(details, decode(fields[17]));
+      }
       String versionText = versionText(exactVersion, minVersion, maxVersion);
       if (!versionText.isEmpty()) {
         details.add("&f支持版本：&e" + versionText);
@@ -118,9 +121,28 @@ public final class SchedulerGameCatalogClient {
       if (!serverId.isEmpty()) {
         aliases.add(serverId);
       }
+      if (fields.length == 19) {
+        for (String alias : decode(fields[18]).split("\\u001f", -1)) {
+          String normalized = BridgeConfig.normalize(alias);
+          if (!normalized.isEmpty()) {
+            aliases.add(normalized);
+          }
+        }
+      }
       return new BridgeConfig.GameEntry(id, name, intro, details, aliases);
     } catch (IllegalArgumentException error) {
       throw new IOException("Scheduler returned an invalid game record", error);
+    }
+  }
+
+  private static void addLines(List<String> target, String value) {
+    if (value.isEmpty()) {
+      return;
+    }
+    for (String line : value.split("\\u001f", -1)) {
+      if (!line.isBlank()) {
+        target.add(line.trim());
+      }
     }
   }
 

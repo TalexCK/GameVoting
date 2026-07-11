@@ -284,8 +284,8 @@ This is the voting feature bridge:
 - requires ViaVersion and caches its original client protocol version name on login and server changes;
 - falls back to Velocity's protocol only when ViaVersion has no protocol for the player;
 - responds to lobby requests over `gamevoting:version`;
-- loads the complete game catalog from Scheduler and provides `/game <game>` with its description, supported versions, player range, and voting or Solo type;
-- falls back to the game entries in its own Velocity `config.yml` only when Scheduler is unavailable;
+- loads the complete game catalog from Scheduler and provides `/game <game>` with its description, rules, aliases, supported versions, player range, and voting or Solo type;
+- keeps the managed Velocity `config.yml` limited to command help and never duplicates Scheduler game content there;
 - replaces `/help` with configurable, permission-aware GameVoting help.
 
 When the lobby has this proxy bridge but no cached response yet, it requests a refresh and reports the version as undetected. It never substitutes Paper's backend-facing protocol for the client version. The bridge does not launch servers, assign ports, register child servers, or execute queued transfers. Those duties belong to SchedulerBridge.

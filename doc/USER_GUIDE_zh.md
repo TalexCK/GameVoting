@@ -284,8 +284,8 @@ READY 轮询。旧启动流程已经返回的异步回调不会把玩家加入�
 - 硬依赖 ViaVersion，并在玩家登录和切换服务器时缓存其原始客户端协议版本名；
 - 只有 ViaVersion 没有该玩家协议时才回退到 Velocity 协议；
 - 通过 `gamevoting:version` 响应大厅的版本请求；
-- 从 Scheduler 加载完整游戏目录，并通过 `/game <game>` 显示介绍、支持版本、人数范围和投票或 Solo 类型；
-- 仅在 Scheduler 不可用时回退到自身 Velocity `config.yml` 的游戏条目；
+- 从 Scheduler 加载完整游戏目录，并通过 `/game <game>` 显示介绍、规则、别名、支持版本、人数范围和投票或 Solo 类型；
+- 当前受管 Velocity `config.yml` 只保存命令帮助，不重复维护 Scheduler 游戏内容；
 - 用可配置、按权限显示的 GameVoting 帮助替换 `/help`。
 
 代理桥存在但大厅尚未取得缓存时，大厅会请求刷新并报告版本未检测，不会使用 Paper 面向

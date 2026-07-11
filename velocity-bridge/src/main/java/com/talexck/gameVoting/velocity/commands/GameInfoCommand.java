@@ -41,7 +41,7 @@ public final class GameInfoCommand implements SimpleCommand {
                 for (String line : game.introLines()) {
                   invocation
                       .source()
-                      .sendMessage(LegacyColorUtil.colorize("&7- &r" + line + "&r"));
+                      .sendMessage(LegacyColorUtil.colorize("&7- " + line + "&r"));
                 }
               }
               if (!game.ruleLines().isEmpty()) {
@@ -49,7 +49,7 @@ public final class GameInfoCommand implements SimpleCommand {
                 for (String line : game.ruleLines()) {
                   invocation
                       .source()
-                      .sendMessage(LegacyColorUtil.colorize("&7- &r" + line + "&r"));
+                      .sendMessage(LegacyColorUtil.colorize("&7- " + line + "&r"));
                 }
               }
               if (game.introLines().isEmpty() && game.ruleLines().isEmpty()) {

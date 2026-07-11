@@ -149,7 +149,7 @@ The managed deployment enables `game-config-mode: "scheduler"`. In this mode Gam
 
 The Scheduler derives `server-id` from the JSON filename, validates the catalog, and passes it through SchedulerBridge to GameVoting. `order` controls menu order. Both BedWars servers run a strict `1.21.11` core and accept clients from `1.21.11` through `26.2`.
 
-The Velocity bridge also reads this catalog from the Scheduler at startup. `/game <game-id>` therefore displays every voting and Solo definition from `servers/*.json`, including its description, supported client versions, player range, and game type. The Velocity `config.yml` game list is used only when the Scheduler catalog cannot be reached.
+The Velocity bridge also reads this catalog from the Scheduler at startup. `/game <game-id>` therefore displays every voting and Solo definition from `servers/*.json`, including its description, rules, aliases, supported client versions, player range, and game type. The managed Velocity `config.yml` keeps only command help; game content is not duplicated there.
 
 Set `solo` to `true` to remove a definition from voting and expose it only through `/solo`. Solo definitions also provide `solo_mode` (`shared` or `player_world`), `solo_startup` (`always` or `on_demand`), `solo_max_players`, and `solo_retention_days`. Definitions with `solo: false` remain exclusive to voting and the normal game list.
 

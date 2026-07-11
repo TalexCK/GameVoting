@@ -33,7 +33,9 @@ class SchedulerGameCatalogClientTest {
             encode("shared"),
             encode("on_demand"),
             "8",
-            "10");
+            "10",
+            encode("&7床被摧毁后无法复活\u001f&7击败所有敌队即可获胜"),
+            encode("bedwars\u001fbw"));
 
     BridgeConfig.GameEntry game = SchedulerGameCatalogClient.parseGameRecord(record);
 
@@ -44,10 +46,14 @@ class SchedulerGameCatalogClientTest {
         game.introLines());
     assertEquals(
         List.of(
+            "&7床被摧毁后无法复活",
+            "&7击败所有敌队即可获胜",
             "&f支持版本：&e1.21.11 &7- &e26.2",
             "&f人数：&e2 &7- &e8",
             "&f类型：&e投票游戏"),
         game.ruleLines());
+    assertTrue(game.aliases().contains("bedwars"));
+    assertTrue(game.aliases().contains("bw"));
   }
 
   @Test
