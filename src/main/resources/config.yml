@@ -1,85 +1,17 @@
-# GameVoting configuration file
-
-# Debug mode for utility classes (shows detailed logging)
 debug: false
-
-# Language configuration
-# Supported languages: en-US, zh-CN, en-UK
+game-config-mode: "scheduler"
 language: "en-US"
-
-# CloudNet proxy service name for player teleportation
-# This is the name of your proxy service (e.g., Proxy-1, Proxy-2)
-# Used for teleporting players: /cloud service <proxy-name> command send <player> <target>
-proxy-service-name: "Proxy-1"
-
-# Teleport strategy is configured per game in games.yml
-
-# Force player spawnpoint (respawn point)
-# Default disabled. Only x/y/z are required and apply to the server's main world.
 spawnpoint:
   enable: false
   x: 0
   y: 64
   z: 0
-
-# Auto stop sub-server when empty for a period.
-# Lobby/Proxy should be excluded by keyword to avoid accidental shutdown.
-idle-shutdown:
-  enabled: true
-  idle-minutes: 10
-  check-interval-seconds: 60
-  excluded-task-keywords:
-    - "lobby"
-    - "proxy"
-  excluded-service-keywords:
-    - "lobby"
-    - "proxy"
-
-# Database configuration
-# Supported types: postgresql, mysql, mongodb, none
 database:
-  enabled: false
-  type: "postgresql"  # Options: postgresql, mysql, mongodb
-  host: "localhost"
-  port: 5432  # Default ports: PostgreSQL=5432, MySQL=3306, MongoDB=27017
+  enabled: true
+  host: "127.0.0.1"
+  port: 5432
   database: "gamevoting"
-  username: "postgres"
-  password: "password"
-
-# Example configurations for different database types:
-#
-# PostgreSQL:
-# database:
-#   type: "postgresql"
-#   host: "localhost"
-#   port: 5432
-#   database: "gamevoting"
-#   username: "postgres"
-#   password: "password"
-#
-# MySQL:
-# database:
-#   type: "mysql"
-#   host: "localhost"
-#   port: 3306
-#   database: "gamevoting"
-#   username: "root"
-#   password: "password"
-#
-# MongoDB:
-# database:
-#   type: "mongodb"
-#   host: "localhost"
-#   port: 27017
-#   database: "gamevoting"
-#   username: ""  # Optional for MongoDB
-#   password: ""  # Optional for MongoDB
-
-# Hologram display locations
-# Created via /vote holograms create command
-# Format: world:x:y:z
+  username: "minigames"
+  password: ""
 holograms:
   locations: []
-  # Example:
-  # - "world:0:64:0"
-  # - "world_nether:100:50:200"

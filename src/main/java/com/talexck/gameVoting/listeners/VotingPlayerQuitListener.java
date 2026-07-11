@@ -10,50 +10,56 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Listener for player quit events related to voting.
- * Updates items for remaining players when someone leaves.
+ * Listener for player quit events related to voting. Updates items for remaining players when
+ * someone leaves.
  */
 public class VotingPlayerQuitListener implements Listener {
 
-    /**
-     * Handle player quit - update items for remaining players if needed.
-     */
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        VotingSession session = VotingSession.getInstance();
+  /** Handle player quit - update items for remaining players if needed. */
+  @EventHandler
+  public void onPlayerQuit(PlayerQuitEvent event) {
+    VotingSession session = VotingSession.getInstance();
 
-        // Wait 1 tick to ensure player count is updated
-        Bukkit.getScheduler().runTaskLater(com.talexck.gameVoting.GameVoting.getInstance(), () -> {
-            int onlineCount = Bukkit.getOnlinePlayers().size();
-            int requiredPlayers = session.getRequiredPlayers();
+    // Wait 1 tick to ensure player count is updated
+    Bukkit.getScheduler()
+        .runTaskLater(
+            com.talexck.gameVoting.GameVoting.getInstance(),
+            () -> {
+              int onlineCount = Bukkit.getOnlinePlayers().size();
+              int requiredPlayers = session.getRequiredPlayers();
 
-            if (session.isActive()) {
+              if (session.isActive()) {
                 VotingUI.refreshOpenVotingUIs();
                 refreshVotingHolograms();
                 return;
-            }
+              }
 
-            // Only update if no voting is active and player count dropped below required threshold
-            if (!session.isActive() && !session.isPreVotingReady() && !session.isReadyPhase()) {
+              // Only update if no voting is active and player count dropped below required
+              // threshold
+              if (!session.isActive() && !session.isPreVotingReady() && !session.isReadyPhase()) {
                 if (onlineCount < requiredPlayers && onlineCount > 0) {
-                    // Give insufficient players item to all remaining players
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(player);
-                    }
+                  // Give insufficient players item to all remaining players
+                  for (Player player : Bukkit.getOnlinePlayers()) {
+                    com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(player);
+                  }
                 }
-            }
-        }, 1L);
+              }
+            },
+            1L);
+  }
+
+  private void refreshVotingHolograms() {
+    GameVoting plugin = GameVoting.getInstance();
+    if (plugin == null
+        || plugin.getHologramConfigManager() == null
+        || plugin.getHologramDisplayManager() == null) {
+      return;
     }
 
-    private void refreshVotingHolograms() {
-        GameVoting plugin = GameVoting.getInstance();
-        if (plugin == null || plugin.getHologramConfigManager() == null || plugin.getHologramDisplayManager() == null) {
-            return;
-        }
-
-        plugin.getHologramDisplayManager().updateAllHolograms(
+    plugin
+        .getHologramDisplayManager()
+        .updateAllHolograms(
             com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.VOTING_ACTIVE,
-            plugin.getHologramConfigManager().getAllLocations()
-        );
-    }
+            plugin.getHologramConfigManager().getAllLocations());
+  }
 }

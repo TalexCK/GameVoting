@@ -1,7 +1,9 @@
 package com.talexck.gameVoting;
 
-import com.talexck.gameVoting.api.cloudnet.CloudNetAPI;
+import com.schedulerbridge.common.ServerInstance;
+import com.schedulerbridge.common.ServerScheduler;
 import com.talexck.gameVoting.commands.VoteCommand;
+import com.talexck.gameVoting.commands.SoloCommand;
 import com.talexck.gameVoting.config.GamesConfigManager;
 import com.talexck.gameVoting.listeners.BossBarListener;
 import com.talexck.gameVoting.party.commands.PartyCommand;
@@ -9,8 +11,8 @@ import com.talexck.gameVoting.party.listeners.PartyQuitListener;
 import com.talexck.gameVoting.utils.display.BossBarManager;
 import com.talexck.gameVoting.utils.gui.ChestUIListener;
 import com.talexck.gameVoting.utils.hologram.HologramManager;
-import eu.cloudnetservice.driver.service.ServiceInfoSnapshot;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -23,8 +25,11 @@ public final class GameVoting extends JavaPlugin {
   private GamesConfigManager gamesManager;
   private com.talexck.gameVoting.config.HologramConfigManager hologramConfigManager;
   private com.talexck.gameVoting.utils.hologram.HologramDisplayManager hologramDisplayManager;
-  private com.talexck.gameVoting.tasks.IdleServerShutdownManager idleShutdownManager;
   private com.talexck.gameVoting.proxy.ProxyVersionBridge proxyVersionBridge;
+  private ServerScheduler serverScheduler;
+  private volatile List<ServerInstance> schedulerInstances = List.of();
+  private VoteCommand voteCommand;
+  private SoloCommand soloCommand;
 
   /**
    * Get the plugin instance.
@@ -71,36 +76,44 @@ public final class GameVoting extends JavaPlugin {
     return proxyVersionBridge;
   }
 
+  public ServerScheduler getServerScheduler() {
+    return serverScheduler;
+  }
+
+  public List<ServerInstance> getSchedulerInstances() {
+    return schedulerInstances;
+  }
+
   @Override
   public void onEnable() {
     instance = this;
     // Save if it doesn't exist
     saveDefaultConfig();
 
-    try {
-      // Initialize CloudNet API (using Driver API injection)
-      CloudNetAPI.initialize();
-
-      // Test connection by getting services
-      int serviceCount = CloudNetAPI.getInstance().getServices().size();
-      getLogger().info("Successfully connected to CloudNet v4!");
-      getLogger().info("Currently running services: " + serviceCount);
-
-      // Log some service info
-      for (ServiceInfoSnapshot service : CloudNetAPI.getInstance().getServices()) {
-        getLogger().info(
-          "  - " + service.name() + " (" + service.serviceId().taskName() + ")"
-        );
-      }
-    } catch (Exception ex) {
-      getLogger().warning("Failed to connect to CloudNet: " + ex.getMessage());
-      getLogger().warning(
-        "Make sure this plugin is running on a CloudNet service!"
-      );
-      getLogger().warning(
-        "Plugin will continue to load but CloudNet features will be unavailable."
-      );
+    serverScheduler = getServer().getServicesManager().load(ServerScheduler.class);
+    if (serverScheduler == null) {
+      getLogger().severe("SchedulerBridge did not register ServerScheduler");
+      getServer().getPluginManager().disablePlugin(this);
+      return;
     }
+    serverScheduler
+        .list()
+        .thenAccept(
+            instances -> {
+              schedulerInstances = List.copyOf(instances);
+              getLogger()
+                  .info(
+                      "Connected to SchedulerBridge with "
+                          + instances.size()
+                          + " registered instances");
+            })
+        .exceptionally(
+            error -> {
+              getLogger().severe("Failed to query SchedulerBridge: " + error.getMessage());
+              return null;
+            });
+    Bukkit.getScheduler()
+        .runTaskTimerAsynchronously(this, this::refreshSchedulerInstances, 20L, 20L);
 
     // Initialize LanguageManager
     com.talexck.gameVoting.utils.language.LanguageManager.initialize(this);
@@ -115,9 +128,7 @@ public final class GameVoting extends JavaPlugin {
     getLogger().info("ChestUI utility loaded successfully!");
 
     // Initialize proxy version bridge (paper <-> velocity plugin message)
-    proxyVersionBridge = new com.talexck.gameVoting.proxy.ProxyVersionBridge(
-      this
-    );
+    proxyVersionBridge = new com.talexck.gameVoting.proxy.ProxyVersionBridge(this);
     proxyVersionBridge.start();
     getLogger().info("ProxyVersionBridge initialized");
 
@@ -131,38 +142,27 @@ public final class GameVoting extends JavaPlugin {
 
     // Register VoteItem listener
     getServer()
-      .getPluginManager()
-      .registerEvents(
-        new com.talexck.gameVoting.listeners.VoteItemListener(),
-        this
-      );
+        .getPluginManager()
+        .registerEvents(new com.talexck.gameVoting.listeners.VoteItemListener(), this);
     getLogger().info("VoteItemListener registered");
 
     // Register PlayerJoin listener
     getServer()
-      .getPluginManager()
-      .registerEvents(
-        new com.talexck.gameVoting.listeners.PlayerJoinListener(),
-        this
-      );
+        .getPluginManager()
+        .registerEvents(new com.talexck.gameVoting.listeners.PlayerJoinListener(), this);
     getLogger().info("PlayerJoinListener registered");
 
     // Register VotingPlayerQuit listener
     getServer()
-      .getPluginManager()
-      .registerEvents(
-        new com.talexck.gameVoting.listeners.VotingPlayerQuitListener(),
-        this
-      );
+        .getPluginManager()
+        .registerEvents(new com.talexck.gameVoting.listeners.VotingPlayerQuitListener(), this);
     getLogger().info("VotingPlayerQuitListener registered");
 
     // Initialize HologramManager (only if DecentHolograms is present)
     if (getServer().getPluginManager().getPlugin("DecentHolograms") != null) {
       HologramManager.initialize(this);
     } else {
-      getLogger().info(
-        "DecentHolograms not found - hologram features disabled"
-      );
+      getLogger().info("DecentHolograms not found - hologram features disabled");
     }
 
     // Initialize games configuration manager
@@ -170,29 +170,36 @@ public final class GameVoting extends JavaPlugin {
     getLogger().info("Games configuration manager initialized");
 
     // Initialize hologram configuration manager
-    hologramConfigManager =
-      new com.talexck.gameVoting.config.HologramConfigManager(this);
+    hologramConfigManager = new com.talexck.gameVoting.config.HologramConfigManager(this);
     getLogger().info("Hologram configuration manager initialized");
 
     // Initialize hologram display manager
-    hologramDisplayManager =
-      new com.talexck.gameVoting.utils.hologram.HologramDisplayManager(this);
+    hologramDisplayManager = new com.talexck.gameVoting.utils.hologram.HologramDisplayManager(this);
     getLogger().info("Hologram display manager initialized");
 
     // Register vote command using legacy Bukkit API
     PluginCommand voteCmd = this.getCommand("vote");
     if (voteCmd != null) {
-      VoteCommand voteCommand = new VoteCommand(this);
+      voteCommand = new VoteCommand(this);
       voteCommand.setGamesManager(gamesManager);
       voteCmd.setExecutor(voteCommand);
       voteCmd.setTabCompleter(
-        new com.talexck.gameVoting.commands.VoteTabCompleter(gamesManager)
-      );
+          new com.talexck.gameVoting.commands.VoteTabCompleter(this, gamesManager));
+      getServer().getPluginManager().registerEvents(voteCommand, this);
       getLogger().info("Registered /vote command with tab completion");
     } else {
-      getLogger().warning(
-        "Failed to register /vote command - check plugin.yml"
-      );
+      getLogger().warning("Failed to register /vote command - check plugin.yml");
+    }
+
+    PluginCommand soloCmd = this.getCommand("solo");
+    if (soloCmd != null) {
+      soloCommand = new SoloCommand(this, gamesManager);
+      soloCmd.setExecutor(soloCommand);
+      soloCmd.setTabCompleter(soloCommand);
+      getServer().getPluginManager().registerEvents(soloCommand, this);
+      getLogger().info("Registered /solo command");
+    } else {
+      getLogger().warning("Failed to register /solo command - check plugin.yml");
     }
 
     // Register party command
@@ -201,79 +208,82 @@ public final class GameVoting extends JavaPlugin {
       partyCmd.setExecutor(new PartyCommand(this));
       getLogger().info("Registered /party command");
     } else {
-      getLogger().warning(
-        "Failed to register /party command - check plugin.yml"
-      );
+      getLogger().warning("Failed to register /party command - check plugin.yml");
     }
 
     // Register party listener
-    getServer()
-      .getPluginManager()
-      .registerEvents(new PartyQuitListener(), this);
+    getServer().getPluginManager().registerEvents(new PartyQuitListener(), this);
     getLogger().info("Party system initialized");
 
-    // Enable idle shutdown for non-lobby/proxy game services
-    idleShutdownManager =
-      new com.talexck.gameVoting.tasks.IdleServerShutdownManager(this);
-    idleShutdownManager.start();
-
     // Give appropriate item to all online players on startup
-    Bukkit.getScheduler().runTaskLater(
-      this,
-      () -> {
-        int onlineCount = Bukkit.getOnlinePlayers().size();
-        int requiredPlayers =
-          com.talexck.gameVoting.voting.VotingSession.getInstance().getRequiredPlayers();
-        if (onlineCount > 0) {
-          for (Player player : Bukkit.getOnlinePlayers()) {
-            if (onlineCount >= requiredPlayers) {
-              // Give green emerald for ready system
-              com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(
-                player
-              );
-            } else {
-              // Give redstone block for insufficient players
-              com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(
-                player
-              );
-            }
-          }
-          getLogger().info(
-            "Given startup items to " + onlineCount + " players"
-          );
+    Bukkit.getScheduler()
+        .runTaskLater(
+            this,
+            () -> {
+              int onlineCount = Bukkit.getOnlinePlayers().size();
+              int requiredPlayers =
+                  com.talexck.gameVoting.voting.VotingSession.getInstance().getRequiredPlayers();
+              if (onlineCount > 0) {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                  if (onlineCount >= requiredPlayers) {
+                    // Give green emerald for ready system
+                    com.talexck.gameVoting.utils.item.VoteItem.giveStartVotingItem(player);
+                  } else {
+                    // Give redstone block for insufficient players
+                    com.talexck.gameVoting.utils.item.VoteItem.giveInsufficientPlayersItem(player);
+                  }
+                  com.talexck.gameVoting.utils.item.VoteItem.giveSoloItem(player);
+                }
+                getLogger().info("Given startup items to " + onlineCount + " players");
 
-          if (onlineCount >= requiredPlayers) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("required", String.valueOf(requiredPlayers));
-            com.talexck.gameVoting.utils.message.MessageUtil.broadcastTranslated(
-              "ready.reached_min_players_start",
-              placeholders
-            );
-          }
-        }
+                if (onlineCount >= requiredPlayers) {
+                  Map<String, String> placeholders = new HashMap<>();
+                  placeholders.put("required", String.valueOf(requiredPlayers));
+                  com.talexck.gameVoting.utils.message.MessageUtil.broadcastTranslated(
+                      "ready.reached_min_players_start", placeholders);
+                }
+              }
 
-        // Initialize hologram displays to show NOT_VOTING state (top games)
-        var locations = hologramConfigManager.getAllLocations();
-        if (!locations.isEmpty()) {
-          hologramDisplayManager.updateAllHolograms(
-            com.talexck.gameVoting.utils.hologram.HologramDisplayManager.DisplayState.NOT_VOTING,
-            locations
-          );
-          getLogger().info(
-            "Initialized " +
-              locations.size() +
-              " hologram(s) with popular games display"
-          );
-        }
-      },
-      20L
-    ); // Delay 1 second to ensure all players are loaded
+              // Initialize hologram displays to show NOT_VOTING state (top games)
+              var locations = hologramConfigManager.getAllLocations();
+              if (!locations.isEmpty()) {
+                hologramDisplayManager.updateAllHolograms(
+                    com.talexck
+                        .gameVoting
+                        .utils
+                        .hologram
+                        .HologramDisplayManager
+                        .DisplayState
+                        .NOT_VOTING,
+                    locations);
+                getLogger()
+                    .info(
+                        "Initialized "
+                            + locations.size()
+                            + " hologram(s) with popular games display");
+              }
+            },
+            20L); // Delay 1 second to ensure all players are loaded
 
     getLogger().info("GameVoting plugin enabled!");
   }
 
+  private void refreshSchedulerInstances() {
+    serverScheduler
+        .list()
+        .thenAccept(instances -> schedulerInstances = List.copyOf(instances))
+        .exceptionally(error -> null);
+  }
+
   @Override
   public void onDisable() {
+    if (voteCommand != null) {
+      voteCommand.shutdown();
+    }
+    if (soloCommand != null) {
+      soloCommand.shutdown();
+    }
+
     // Cleanup boss bars
     BossBarManager.getInstance().shutdown();
 
@@ -284,24 +294,17 @@ public final class GameVoting extends JavaPlugin {
 
     // Remove all voting holograms
     if (hologramDisplayManager != null && hologramConfigManager != null) {
-      hologramDisplayManager.removeAllHolograms(
-        hologramConfigManager.getAllLocations()
-      );
+      hologramDisplayManager.removeAllHolograms(hologramConfigManager.getAllLocations());
     }
 
     // Shutdown database connections
-    var dbManager =
-      com.talexck.gameVoting.utils.database.DatabaseManager.getInstance();
+    var dbManager = com.talexck.gameVoting.utils.database.DatabaseManager.getInstance();
     if (dbManager != null) {
       dbManager.shutdown();
     }
 
     // Clear all active menus
     ChestUIListener.clearAll();
-
-    if (idleShutdownManager != null) {
-      idleShutdownManager.shutdown();
-    }
 
     if (proxyVersionBridge != null) {
       proxyVersionBridge.shutdown();

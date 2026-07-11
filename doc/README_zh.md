@@ -1,353 +1,209 @@
 # GameVoting
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
-[![Java Version](https://img.shields.io/badge/java-17%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![Paper Version](https://img.shields.io/badge/paper-1.16+-green.svg)](https://papermc.io/)
-[![CloudNet Version](https://img.shields.io/badge/cloudnet-4.0.0--RC10-purple.svg)](https://cloudnetservice.eu/)
+[![许可证](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
+[![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://adoptium.net/)
+[![Paper](https://img.shields.io/badge/Paper-1.21.1-green.svg)](https://papermc.io/)
+[![数据存储](https://img.shields.io/badge/storage-PostgreSQL-blue.svg)](https://www.postgresql.org/)
 
-[English](../README.md) | [User Guide](USER_GUIDE.md) | [使用文档](USER_GUIDE_zh.md)
+[English](../README.md) | [User Guide](USER_GUIDE.md) | [中文使用指南](USER_GUIDE_zh.md)
 
-一个功能强大的 Minecraft 投票系统插件，专为 Paper 服务器和 CloudNet v4 网络环境设计。支持自动游戏选择、玩家准备系统、全息显示和多数据库持久化。
+GameVoting 是 Minigames 网络的大厅投票插件，负责投票、准备确认、游戏选择、由调度器管理的子服生命周期、玩家传送队列、投票历史、全息图和队伍功能。
 
-## ✨ 特性
+当前运行架构只通过 SchedulerBridge 管理服务器，并只使用 PostgreSQL 持久化数据。
 
-### 🎮 投票系统
-- **多阶段投票流程**
-  - 基于玩家数量（≥6人）的自动物品分发
-  - 使用绿宝石触发的预投票准备阶段
-  - 使用指南针菜单界面的投票阶段
-  - 使用染料准备指示器的投票后准备阶段
-  
-- **智能玩家准备系统**
-  - 当在线玩家≥6人时，每位玩家获得绿宝石物品
-  - 右键标记准备/取消准备状态
-  - 所有玩家准备完毕后自动开始投票
-  - 实时全息图更新显示准备人数
-  
-- **灵活的投票模式**
-  - 手动启动：`/vote start [时长]` - 总是立即开始投票
-  - 自动启动：绿宝石准备系统在所有玩家准备完毕后触发投票
-  - 自定义投票时长（默认60秒）
+## 运行架构
 
-### 📊 全息显示
-- **动态显示状态**
-  - 空闲状态：历史前10获胜游戏及投票数
-  - 准备阶段：显示准备玩家数量和进度
-  - 投票进行中：当前可用游戏及实时投票数
-  - 投票结束：本次投票前10游戏
-  - 传送后：恢复显示历史前10
-  
-- **多位置支持**
-  - 使用 `/vote holograms create` 在任意位置创建全息图
-  - 所有全息图位置自动同步
-  - 使用简单命令列出和删除全息图
+1. GameVoting 从 Paper 的服务管理器取得 SchedulerBridge 注册的 `ServerScheduler`。
+2. Scheduler 从 `servers/*.json` 读取 `gamevoting` 条目，并通过 SchedulerBridge 传入有序游戏目录。
+3. 投票结束后，GameVoting 在玩家进入准备阶段时立即启动获胜游戏的 `server-id`。
+4. 子服桥接组件向调度器报告启动状态和心跳，GameVoting 持续查询，直到实例进入 `READY`。
+5. Velocity 上的 SchedulerBridge 自动用调度器分配的地址注册所有就绪子服。
+6. GameVoting 把需要传送的玩家 UUID 加入队列，Velocity 执行连接并回报结果。
+7. 失败的传送保留在队列中，由调度器重试；当前部署默认间隔为 30 秒。
+8. 子服 Bridge 在玩家进入时重置空服计时，只有连续 5 分钟无人时才通知调度器关闭实例。
 
-### 🗄️ 数据库集成
-- **多数据库支持**
-  - PostgreSQL（生产环境推荐）
-  - MySQL/MariaDB
-  - MongoDB
-  - 可选：可以不使用数据库运行
-  
-- **投票历史追踪**
-  - 记录获胜游戏、总投票数、玩家数量
-  - 存储每个游戏的详细投票分布
-  - 基于时间戳的历史分析
-  - 自动统计前10获胜者
+GameVoting 不分配子服端口，也不直接修改 Velocity 的服务器列表。
 
-### 🌐 CloudNet 集成
-- **无缝服务管理**
-  - 自动 CloudNet 服务检测
-  - 基于服务状态的游戏过滤
-  - 通过代理命令传送玩家
-  - 仅传送实际投票的玩家
-  
-- **服务配置**
-  - 通过 `games.yml` 进行游戏到服务的映射
-  - 可配置的服务名称模式
-  - 支持每种游戏类型的多个服务
+## 功能
 
-### 🌍 国际化
-- **多语言支持**
-  - 英语（en-US、en-UK）
-  - 简体中文（zh-CN）
-  - 易于添加自定义语言
-  
-- **完整的翻译覆盖**
-  - 所有命令、消息和界面元素
-  - 物品名称和描述
-  - 全息图显示
-  - 错误消息和反馈
+- 大厅准备、正式投票、投票后准备的多阶段流程
+- 通过调度桥启动、查询、列出、停止服务器并提交传送
+- 准备阶段的精确客户端版本或版本范围校验
+- 使用 `min_player` 和 `max_player` 按大厅人数筛选游戏
+- 使用 UUID、带时区时间和 JSONB 明细保存投票历史
+- 可选的 DecentHolograms 全息图
+- 可配置的语言、投票物品、BossBar 和 ActionBar
+- 最多支持 16 名玩家的大厅队伍管理
+- 独立的 `/solo` 目录、单玩家共享服加入和不可变的玩家世界队伍名单
+- 可选的 GameVoting Velocity 桥，用于客户端版本检测、`/game` 和按权限显示的 `/help`
 
-### 🎯 高级功能
-- **智能物品管理**
-  - 自动在9号位分发物品
-  - 不同服务器状态对应不同物品
-  - 带持久化数据的不可丢弃投票物品
-  - 颜色编码的准备状态指示器
-  
-- **队伍系统集成**
-  - 创建和管理玩家队伍
-  - 基于队伍的游戏传送
-  - 队伍成员管理
-  
-- **强大的权限系统**
-  - 细粒度权限控制
-  - 管理员与玩家命令分离
-  - 可配置的访问级别
+## 运行要求
 
-## 📋 需求
+- 当前大厅部署使用 Paper 1.21.1
+- Java 17 或更高版本；当前部署使用 Java 21
+- 大厅必须安装 Paper 版 SchedulerBridge
+- Velocity 和所有受管子服必须安装对应平台的 SchedulerBridge
+- `server-scheduler` 正常运行，且桥接令牌一致
+- 已创建名为 `gamevoting` 的 PostgreSQL 数据库
+- 需要客户端版本校验和代理命令时安装 ViaVersion 与 GameVoting Velocity 桥
+- 仅在启用全息图时需要 DecentHolograms 2.8.6 或更高版本
 
-- **服务器**
-  - Paper 1.16 或更高版本（不支持 Spigot/Bukkit）
-  - Java 17 或更高版本
-  - CloudNet v4（4.0.0-RC10 或更高版本）
-  
-- **依赖项**
-  - DecentHolograms 2.8.6+（用于全息图显示）
-  - CloudNet Driver 和 Bridge 模块
-  
-- **可选**
-  - PostgreSQL 12+ / MySQL 8.0+ / MongoDB 5.0+（用于投票历史）
+如果 Paper SchedulerBridge 没有注册 `ServerScheduler`，GameVoting 会禁用自身。
 
-## 🚀 安装
+## 构建
 
-1. **下载插件**
-   ```bash
-   # 从源码构建
-   git clone https://github.com/yourusername/GameVoting.git
-   cd GameVoting
-   mvn clean package
-   ```
+先把 SchedulerBridge 公共 API 发布到本机 Maven 仓库：
 
-2. **安装依赖**
-   - 下载并安装 [DecentHolograms](https://www.spigotmc.org/resources/decentholograms.96927/)
-   - 确保 CloudNet v4 已正确配置
+```bash
+cd ../scheduler-bridge
+gradle :common:publishToMavenLocal
+```
 
-3. **部署插件**
-   ```bash
-   # 将编译后的 JAR 复制到插件文件夹
-   cp target/GameVoting-1.1.0.jar /path/to/server/plugins/
-   ```
+构建 Paper 插件：
 
-4. **配置插件**
-   - 启动服务器以生成默认配置文件
-   - 编辑 `plugins/GameVoting/config.yml`
-   - 配置 `plugins/GameVoting/games.yml`
-   - 重启服务器
+```bash
+cd ../GameVoting
+mvn clean package
+```
 
-## ⚙️ 配置
+构建可选的 GameVoting Velocity 桥：
 
-### config.yml
+```bash
+cd velocity-bridge
+mvn clean package
+```
+
+产物：
+
+- `target/GameVoting-1.1.4.jar`
+- `velocity-bridge/target/gamevoting-velocity-bridge-1.0.0.jar`
+
+## 安装
+
+大厅 Paper 服务器需要安装：
+
+- SchedulerBridge
+- GameVoting
+- 启用全息图时安装 DecentHolograms
+
+Velocity 需要安装：
+
+- SchedulerBridge Velocity 插件
+- ViaVersion
+- 需要版本校验、`/game` 和 GameVoting `/help` 时安装 GameVoting Velocity 桥
+
+首次启动大厅后配置：
+
+- `plugins/GameVoting/config.yml`
+- `plugins/GameVoting/lang/*.yml`
+- `plugins/GameVoting/holograms.yml`
+
+在当前受管部署中，调度器的文件渲染会从中央配置写入 PostgreSQL 连接参数。
+
+## 主配置
+
 ```yaml
-# 调试模式，显示详细日志
 debug: false
-
-# 语言：en-US、en-UK、zh-CN
+game-config-mode: "scheduler"
 language: "zh-CN"
-
-# CloudNet 代理服务名称
-proxy-service-name: "Proxy-1"
-
-# 数据库配置
+spawnpoint:
+  enable: false
+  x: 0
+  y: 64
+  z: 0
 database:
   enabled: true
-  type: "postgresql"  # postgresql、mysql、mongodb
-  host: "localhost"
+  host: "127.0.0.1"
   port: 5432
   database: "gamevoting"
-  username: "postgres"
-  password: "password"
-
-# 全息图位置（通过命令管理）
+  username: "minigames"
+  password: "replace-me"
 holograms:
   locations: []
 ```
 
-### games.yml
-```yaml
-games:
-  - id: "skywars"
-    name: "空岛战争"
-    service-name: "SkyWars-{number}"
-    icon: "GOLDEN_SWORD"
-    description: "在天空中战斗！"
-    
-  - id: "bedwars"
-    name: "起床战争"
-    service-name: "BedWars-{number}"
-    icon: "RED_BED"
-    description: "保护你的床！"
+PostgreSQL 是唯一支持的持久化后端。插件会自动创建 `vote_history` 表和索引。将 `database.enabled` 设为 `false` 会关闭历史记录和 `/vote session list`，但实时投票仍可运行。
+
+## Scheduler 游戏目录
+
+当前部署启用 `game-config-mode: "scheduler"`。该模式下 GameVoting 不会创建或读取
+`games.yml`，每个可投票子服都在 `servers/<server-id>.json` 中维护 `gamevoting`：
+
+```json
+{
+  "gamevoting": {
+    "order": 10,
+    "id": "GScard",
+    "name": "&b&lGSkard",
+    "description": [
+      "&7用卡牌击败对手!"
+    ],
+    "material": "GOLDEN_CARROT",
+    "custom_model_data": 0,
+    "min_version": "1.21.11",
+    "max_version": "26.2",
+    "min_players": 4,
+    "max_players": 50
+  }
+}
 ```
 
-## 📖 使用方法
+Scheduler 直接用 JSON 文件名作为 `server-id`，校验目录后通过 SchedulerBridge 传给
+GameVoting。`order` 控制菜单顺序。两个 BedWars 服务端核心严格固定为 `1.21.11`，
+允许客户端范围为 `1.21.11` 至 `26.2`。
 
-### 玩家使用
+将 `solo` 设为 `true` 后，该定义不会出现在普通投票或游戏列表中，只会出现在
+`/solo`。Solo 定义还包含 `solo_mode`（`shared` 或 `player_world`）、
+`solo_startup`（`always` 或 `on_demand`）、`solo_max_players` 和
+`solo_retention_days`。`solo: false` 的定义只属于普通投票目录。
 
-1. **自动投票（≥6人）**
-   ```
-   - 等待9号位出现绿宝石物品
-   - 右键标记准备
-   - 所有玩家准备完毕后开始投票
-   ```
+`shared` 启动或加入一台由调度器管理的共享服务器，每次只提交点击者本人，不会捕获或冻结
+队伍。点击 `player_world` 游戏时会先向 Scheduler 查询现有存档：名单内玩家会直接重新启动
+原世界；没有存档的玩家会进入创建界面，可以直接创建单人世界，也可以选择一名当前大厅
+在线玩家并发送可点击接受或拒绝的聊天申请。只有对方接受后才能按双人名单创建，创建后的
+一人或两人名单会冻结；使用 `/solo destroy <game-id>` 销毁存档后才能更换名单重建。
 
-2. **手动投票**
-   ```
-   - 管理员启动：/vote start
-   - 在9号位收到指南针
-   - 右键打开投票菜单
-   - 选择你喜欢的游戏
-   ```
+GameVoting Velocity 桥硬依赖 ViaVersion，优先读取 ViaVersion 保存的原始客户端协议号和
+版本名；只有 ViaVersion 没有该玩家的协议时才回退到 Velocity 协议。代理桥存在但大厅缓存
+尚未返回时，大厅只会报告版本未检测并请求刷新，不会把 Paper 后端协议冒充客户端协议。
 
-3. **投票后准备**
-   ```
-   - 投票结束后收到灰色染料
-   - 右键标记准备
-   - 准备后变为绿色染料
-   - 所有玩家准备完毕后开始游戏
-   ```
+GameVoting 每秒查询一次调度器状态；实例进入 `READY` 后立即提交已捕获玩家，不再固定等待。Velocity 会暂存传送，直到 ViaVersion 已检测到目标后端协议，再立即连接玩家。
 
-### 管理员使用
+停止或替换待传送目标时，插件会取消 READY 轮询，旧启动流程的回调不会在之后继续传送玩家。
 
-```bash
-# 手动开始投票
-/vote start [时长]
+## 命令
 
-# 强制开始游戏（跳过准备阶段）
-/vote forcestart
+玩家命令：
 
-# 取消当前投票
-/vote cancel
+- `/vote` 在投票进行中打开投票菜单。
+- `/vote start [分钟]` 立即开始投票，默认一分钟；支持 `0.5` 和 `0.5min` 这类参数。
+- `/vote ready` 在客户端版本校验通过后标记准备。
+- `/vote gamestart` 允许本轮投票发起者从准备阶段继续开局。
+- `/vote join [game-id]` 将玩家传送请求加入当前或指定就绪子服的队列。
+- `/vote session list [page]` 查看已保存的投票历史。
+- `/solo` 打开仅包含 Solo 游戏的菜单。
+- `/solo start <game-id>` 进入现有玩家世界或打开新世界创建流程；共享游戏会直接启动。
+- `/solo destroy <game-id>` 销毁调用者的 `player_world` 世界，以便使用新名单重建。
 
-# 重载配置
-/vote reload
+玩家快捷栏第 6 格固定提供萤石粉；该物品不能移动或丢弃，右键会打开与 `/solo` 相同的
+Solo 目录。
 
-# 全息图管理
-/vote holograms create        # 在当前位置创建
-/vote holograms list          # 列出所有全息图
-/vote holograms remove <id>   # 删除指定全息图
+管理命令：
 
-# 加入游戏服务
-/vote join <服务名>
+- `/vote stop`
+- `/vote forcestart <game-id>`
+- `/vote stopgame <实例ID>`：停止一个正在运行的 Scheduler 实例；补全只显示在线实例，例如 `Backstabbed-1`。
+- `/vote gamelist`
+- `/vote session stop`
+- `/vote reload`
+- `/vote holograms create`
+- `/vote holograms list`
+- `/vote holograms remove <id>`
+- `/vote lock <player>`
+- `/vote unlock <player>`
 
-# 队伍命令
-/party create              # 创建队伍
-/party invite <玩家>       # 邀请玩家
-/party join <玩家>         # 加入队伍
-/party leave              # 离开当前队伍
-/party disband            # 解散你的队伍
-```
+完整的权限、当前调度器 ID、传送行为、Velocity 组件职责和故障排除请查看[中文使用指南](USER_GUIDE_zh.md)。
 
-## 🔌 API 使用
+## 许可证
 
-### 开发者接口
-
-```java
-// 获取投票会话
-VotingSession session = VotingSession.getInstance();
-
-// 检查投票状态
-boolean isVoting = session.isVotingInProgress();
-boolean isReady = session.isReadyPhaseActive();
-
-// 获取投票计数
-Map<String, Integer> votes = session.getVoteCounts();
-
-// 访问数据库
-VoteHistoryRepository repo = DatabaseManager.getInstance()
-    .getVoteHistoryRepository();
-List<VoteHistory> history = repo.getTopWinningGames(10);
-
-// 全息图管理
-HologramManager manager = plugin.getHologramManager();
-manager.updateAllDisplays(DisplayState.VOTING_ACTIVE);
-```
-
-## 🏗️ 项目结构
-
-```
-GameVoting/
-├── src/main/java/com/talexck/gameVoting/
-│   ├── GameVoting.java              # 主插件类
-│   ├── commands/                     # 命令处理器
-│   │   ├── VoteCommand.java         # 投票命令
-│   │   └── PartyCommand.java        # 队伍命令
-│   ├── config/                       # 配置管理
-│   │   ├── GameConfig.java          # 游戏配置
-│   │   └── ConfigLoader.java        # 配置加载器
-│   ├── voting/                       # 投票系统
-│   │   └── VotingSession.java       # 投票会话管理器
-│   ├── database/                     # 数据库层
-│   │   ├── DatabaseManager.java     # 数据库连接
-│   │   ├── models/                  # 数据模型
-│   │   └── repositories/            # 数据仓库
-│   ├── hologram/                     # 全息图显示
-│   │   ├── HologramManager.java     # 全息图管理器
-│   │   └── HologramDisplayManager.java
-│   ├── listeners/                    # 事件监听器
-│   │   ├── VoteItemListener.java    # 投票物品交互
-│   │   ├── PlayerJoinListener.java  # 玩家加入事件
-│   │   └── VotingPlayerQuitListener.java
-│   ├── cloudnet/                     # CloudNet 集成
-│   │   └── CloudNetAPI.java         # CloudNet API 包装器
-│   ├── party/                        # 队伍系统
-│   │   └── PartyManager.java        # 队伍管理
-│   └── utils/                        # 工具类
-│       ├── item/VoteItem.java       # 投票物品管理
-│       ├── MessageUtil.java         # 消息工具
-│       └── ActionBarUtil.java       # ActionBar 工具
-├── src/main/resources/
-│   ├── plugin.yml                    # 插件元数据
-│   ├── config.yml                    # 默认配置
-│   ├── games.yml                     # 游戏定义
-│   └── lang/                         # 语言文件
-│       ├── en-US.yml
-│       ├── en-UK.yml
-│       └── zh-CN.yml
-└── pom.xml                           # Maven 配置
-```
-
-## 🤝 贡献
-
-欢迎贡献！请遵循以下指南：
-
-1. Fork 本仓库
-2. 创建特性分支（`git checkout -b feature/amazing-feature`）
-3. 提交你的更改（`git commit -m 'Add amazing feature'`）
-4. 推送到分支（`git push origin feature/amazing-feature`）
-5. 开启 Pull Request
-
-## 📝 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](../LICENSE) 文件。
-
-## 🙏 鸣谢
-
-- [PaperMC](https://papermc.io/) - 高性能 Minecraft 服务器
-- [CloudNet](https://cloudnetservice.eu/) - Minecraft 云系统
-- [DecentHolograms](https://github.com/DecentSoftware-eu/DecentHolograms) - 全息图 API
-- 本插件的所有贡献者和用户
-
-## 📧 支持
-
-- **问题反馈**：[GitHub Issues](https://github.com/yourusername/GameVoting/issues)
-- **英文文档**：[User Guide](USER_GUIDE.md)
-- **中文文档**：[使用文档](USER_GUIDE_zh.md)
-
-## 🔄 版本历史
-
-### v1.1.0
-- 添加了带绿宝石触发的预投票准备系统
-- 实现了带染料指示器的投票后准备阶段
-- 添加了基于玩家数量的物品分发
-- 增强了全息图显示状态
-- 改进了 CloudNet 集成
-- 添加了投票历史数据库追踪
-- 实现了仅传送已投票玩家的过滤功能
-
-### v1.0.0
-- 初始版本
-- 基础投票系统
-- CloudNet 服务集成
-- 全息图显示
-- 多语言支持
+本项目采用 [MIT License](../LICENSE)。
