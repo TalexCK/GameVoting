@@ -41,6 +41,31 @@ public final class BridgeConfig {
     return permissionHelpSections;
   }
 
+  public BridgeConfig withGames(Collection<GameEntry> games) {
+    Map<String, GameEntry> indexed = new LinkedHashMap<>();
+    for (GameEntry game : games) {
+      String id = normalize(game.id());
+      if (id.isEmpty()) {
+        continue;
+      }
+      Set<String> aliases = new LinkedHashSet<>(game.aliases());
+      aliases.add(id);
+      GameEntry configured = gamesByKey.get(id);
+      if (configured != null) {
+        aliases.addAll(configured.aliases());
+      }
+      indexed.put(
+          id,
+          new GameEntry(
+              id,
+              game.name(),
+              game.introLines(),
+              game.ruleLines(),
+              aliases));
+    }
+    return new BridgeConfig(indexed, defaultHelpLines, permissionHelpSections);
+  }
+
   public Optional<GameEntry> findGame(String input) {
     String normalized = normalize(input);
     if (normalized.isEmpty()) {

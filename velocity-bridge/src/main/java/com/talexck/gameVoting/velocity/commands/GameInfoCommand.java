@@ -34,17 +34,22 @@ public final class GameInfoCommand implements SimpleCommand {
             game -> {
               invocation
                   .source()
-                  .sendMessage(LegacyColorUtil.colorize("&6=== " + game.name() + " ==="));
+                  .sendMessage(
+                      LegacyColorUtil.colorize("&6=== &r" + game.name() + " &r&6==="));
               if (!game.introLines().isEmpty()) {
                 invocation.source().sendMessage(LegacyColorUtil.colorize("&e介绍:"));
                 for (String line : game.introLines()) {
-                  invocation.source().sendMessage(LegacyColorUtil.colorize("&7- " + line));
+                  invocation
+                      .source()
+                      .sendMessage(LegacyColorUtil.colorize("&7- &r" + line + "&r"));
                 }
               }
               if (!game.ruleLines().isEmpty()) {
-                invocation.source().sendMessage(LegacyColorUtil.colorize("&e规则:"));
+                invocation.source().sendMessage(LegacyColorUtil.colorize("&e规则与信息:"));
                 for (String line : game.ruleLines()) {
-                  invocation.source().sendMessage(LegacyColorUtil.colorize("&7- " + line));
+                  invocation
+                      .source()
+                      .sendMessage(LegacyColorUtil.colorize("&7- &r" + line + "&r"));
                 }
               }
               if (game.introLines().isEmpty() && game.ruleLines().isEmpty()) {
@@ -75,7 +80,6 @@ public final class GameInfoCommand implements SimpleCommand {
     String games =
         config.getGames().stream()
             .map(BridgeConfig.GameEntry::id)
-            .sorted()
             .collect(Collectors.joining(", "));
     if (games.isEmpty()) {
       invocation.source().sendMessage(LegacyColorUtil.colorize("&c当前未配置任何游戏。"));

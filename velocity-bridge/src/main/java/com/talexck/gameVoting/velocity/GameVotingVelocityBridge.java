@@ -5,6 +5,7 @@ import com.talexck.gameVoting.velocity.commands.GameInfoCommand;
 import com.talexck.gameVoting.velocity.commands.ProxyHelpCommand;
 import com.talexck.gameVoting.velocity.config.BridgeConfig;
 import com.talexck.gameVoting.velocity.config.BridgeConfigLoader;
+import com.talexck.gameVoting.velocity.config.SchedulerGameCatalogClient;
 import com.viaversion.viaversion.api.Via;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.command.CommandMeta;
@@ -50,6 +51,7 @@ public final class GameVotingVelocityBridge {
   private final ProxyServer proxyServer;
   private final Logger logger;
   private final BridgeConfigLoader bridgeConfigLoader;
+  private final Optional<SchedulerGameCatalogClient> schedulerGameCatalogClient;
   private final Map<UUID, String> versionCache = new ConcurrentHashMap<>();
   private volatile BridgeConfig bridgeConfig;
   private CommandMeta gameCommandMeta;
@@ -61,6 +63,7 @@ public final class GameVotingVelocityBridge {
     this.proxyServer = proxyServer;
     this.logger = logger;
     this.bridgeConfigLoader = new BridgeConfigLoader(dataDirectory);
+    this.schedulerGameCatalogClient = SchedulerGameCatalogClient.fromEnvironment();
     this.bridgeConfig = BridgeConfig.empty();
   }
 
@@ -160,14 +163,31 @@ public final class GameVotingVelocityBridge {
   }
 
   private void reloadBridgeConfig() {
+    BridgeConfig loaded;
     try {
-      bridgeConfig = bridgeConfigLoader.load();
-      logger.info(
-          "Loaded Velocity command config, {} games available", bridgeConfig.getGames().size());
+      loaded = bridgeConfigLoader.load();
     } catch (IOException e) {
-      bridgeConfig = BridgeConfig.empty();
       logger.error("Failed to load Velocity command config", e);
+      loaded = BridgeConfig.empty();
     }
+
+    if (schedulerGameCatalogClient.isPresent()) {
+      try {
+        var games = schedulerGameCatalogClient.orElseThrow().load();
+        if (!games.isEmpty()) {
+          loaded = loaded.withGames(games);
+          logger.info("Loaded {} games from Scheduler for /game", games.size());
+        } else {
+          logger.warn("Scheduler game catalog is empty; using local Velocity config");
+        }
+      } catch (IOException error) {
+        logger.warn(
+            "Failed to load Scheduler game catalog; using local Velocity config: {}",
+            error.getMessage());
+      }
+    }
+    bridgeConfig = loaded;
+    logger.info("Loaded Velocity command config, {} games available", loaded.getGames().size());
   }
 
   private void registerCommands(CommandManager commandManager) {

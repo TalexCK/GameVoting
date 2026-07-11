@@ -35,7 +35,7 @@ GameVoting 不分配子服端口，也不直接修改 Velocity 的服务器列�
 - 可配置的语言、投票物品、BossBar 和 ActionBar
 - 最多支持 16 名玩家的大厅队伍管理
 - 独立的 `/solo` 目录、单玩家共享服加入和不可变的玩家世界队伍名单
-- 可选的 GameVoting Velocity 桥，用于客户端版本检测、`/game` 和按权限显示的 `/help`
+- 可选的 GameVoting Velocity 桥，用于客户端版本检测、Scheduler 动态 `/game` 和按权限显示的 `/help`
 
 ## 运行要求
 
