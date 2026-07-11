@@ -12,80 +12,105 @@ import java.util.Set;
 
 public final class BridgeConfig {
 
-    private final Map<String, GameEntry> gamesByKey;
-    private final List<String> defaultHelpLines;
-    private final List<PermissionHelpSection> permissionHelpSections;
+  private final Map<String, GameEntry> gamesByKey;
+  private final List<String> defaultHelpLines;
+  private final List<PermissionHelpSection> permissionHelpSections;
 
-    public BridgeConfig(Map<String, GameEntry> gamesByKey,
-                        List<String> defaultHelpLines,
-                        List<PermissionHelpSection> permissionHelpSections) {
-        this.gamesByKey = Collections.unmodifiableMap(new LinkedHashMap<>(gamesByKey));
-        this.defaultHelpLines = List.copyOf(defaultHelpLines);
-        this.permissionHelpSections = List.copyOf(permissionHelpSections);
+  public BridgeConfig(
+      Map<String, GameEntry> gamesByKey,
+      List<String> defaultHelpLines,
+      List<PermissionHelpSection> permissionHelpSections) {
+    this.gamesByKey = Collections.unmodifiableMap(new LinkedHashMap<>(gamesByKey));
+    this.defaultHelpLines = List.copyOf(defaultHelpLines);
+    this.permissionHelpSections = List.copyOf(permissionHelpSections);
+  }
+
+  public static BridgeConfig empty() {
+    return new BridgeConfig(Map.of(), List.of(), List.of());
+  }
+
+  public Collection<GameEntry> getGames() {
+    return gamesByKey.values();
+  }
+
+  public List<String> getDefaultHelpLines() {
+    return defaultHelpLines;
+  }
+
+  public List<PermissionHelpSection> getPermissionHelpSections() {
+    return permissionHelpSections;
+  }
+
+  public BridgeConfig withGames(Collection<GameEntry> games) {
+    Map<String, GameEntry> indexed = new LinkedHashMap<>();
+    for (GameEntry game : games) {
+      String id = normalize(game.id());
+      if (id.isEmpty()) {
+        continue;
+      }
+      Set<String> aliases = new LinkedHashSet<>(game.aliases());
+      aliases.add(id);
+      GameEntry configured = gamesByKey.get(id);
+      if (configured != null) {
+        aliases.addAll(configured.aliases());
+      }
+      indexed.put(
+          id,
+          new GameEntry(
+              id,
+              game.name(),
+              game.introLines(),
+              game.ruleLines(),
+              aliases));
+    }
+    return new BridgeConfig(indexed, defaultHelpLines, permissionHelpSections);
+  }
+
+  public Optional<GameEntry> findGame(String input) {
+    String normalized = normalize(input);
+    if (normalized.isEmpty()) {
+      return Optional.empty();
     }
 
-    public static BridgeConfig empty() {
-        return new BridgeConfig(Map.of(), List.of(), List.of());
+    GameEntry direct = gamesByKey.get(normalized);
+    if (direct != null) {
+      return Optional.of(direct);
     }
 
-    public Collection<GameEntry> getGames() {
-        return gamesByKey.values();
+    return gamesByKey.values().stream()
+        .filter(game -> game.aliases().contains(normalized))
+        .findFirst();
+  }
+
+  public Set<String> collectGameSuggestions() {
+    Set<String> suggestions = new LinkedHashSet<>();
+    for (GameEntry game : gamesByKey.values()) {
+      suggestions.add(game.id());
+      suggestions.addAll(game.aliases());
     }
+    return suggestions;
+  }
 
-    public List<String> getDefaultHelpLines() {
-        return defaultHelpLines;
+  public static String normalize(String value) {
+    return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+  }
+
+  public record GameEntry(
+      String id,
+      String name,
+      List<String> introLines,
+      List<String> ruleLines,
+      Set<String> aliases) {
+    public GameEntry {
+      introLines = List.copyOf(introLines);
+      ruleLines = List.copyOf(ruleLines);
+      aliases = Set.copyOf(aliases);
     }
+  }
 
-    public List<PermissionHelpSection> getPermissionHelpSections() {
-        return permissionHelpSections;
+  public record PermissionHelpSection(String permission, List<String> lines) {
+    public PermissionHelpSection {
+      lines = List.copyOf(lines);
     }
-
-    public Optional<GameEntry> findGame(String input) {
-        String normalized = normalize(input);
-        if (normalized.isEmpty()) {
-            return Optional.empty();
-        }
-
-        GameEntry direct = gamesByKey.get(normalized);
-        if (direct != null) {
-            return Optional.of(direct);
-        }
-
-        return gamesByKey.values().stream()
-            .filter(game -> game.aliases().contains(normalized))
-            .findFirst();
-    }
-
-    public Set<String> collectGameSuggestions() {
-        Set<String> suggestions = new LinkedHashSet<>();
-        for (GameEntry game : gamesByKey.values()) {
-            suggestions.add(game.id());
-            suggestions.addAll(game.aliases());
-        }
-        return suggestions;
-    }
-
-    public static String normalize(String value) {
-        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-    }
-
-    public record GameEntry(
-        String id,
-        String name,
-        List<String> introLines,
-        List<String> ruleLines,
-        Set<String> aliases
-    ) {
-        public GameEntry {
-            introLines = List.copyOf(introLines);
-            ruleLines = List.copyOf(ruleLines);
-            aliases = Set.copyOf(aliases);
-        }
-    }
-
-    public record PermissionHelpSection(String permission, List<String> lines) {
-        public PermissionHelpSection {
-            lines = List.copyOf(lines);
-        }
-    }
+  }
 }

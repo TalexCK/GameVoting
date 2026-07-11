@@ -2,13 +2,13 @@ name: GameVoting
 version: '1.1.4'
 main: com.talexck.gameVoting.GameVoting
 api-version: '1.16'
-depend: [CloudNet-Bridge]
+depend: [SchedulerBridge]
 softdepend: [DecentHolograms]
 
 commands:
   vote:
     description: Open voting interface or manage voting sessions
-    usage: /<command> [start|stop|stopgame|gamelist|forcestart|ready|gamestart|holograms|session|reload|join [game]]
+    usage: /<command> [start|stop|stopgame|gamelist|forcestart|ready|gamestart|holograms|session|reload|join [game]|lock <player>|unlock <player>]
     permission: gamevoting.vote
     permission-message: "&cYou don't have permission to use this command"
   party:
@@ -16,6 +16,11 @@ commands:
     usage: /<command> [create|invite|accept|decline|exit|list|transfer|vote|forcestart]
     aliases: [p]
     permission: gamevoting.party
+    permission-message: "&cYou don't have permission to use this command"
+  solo:
+    description: Open the solo game catalog or manage a player world
+    usage: /<command> [start <game-id>|destroy <game-id>]
+    permission: gamevoting.solo
     permission-message: "&cYou don't have permission to use this command"
 
 permissions:
@@ -25,8 +30,14 @@ permissions:
   gamevoting.vote.admin:
     description: Start and stop voting sessions
     default: op
+  gamevoting.vote.lock:
+    description: Lock or unlock a player's next eligible vote
+    default: false
   gamevoting.party:
     description: Use party system
+    default: true
+  gamevoting.solo:
+    description: Open and launch games from the solo catalog
     default: true
   gamevoting.party.leader:
     description: Party leader privileges (voting, force start)

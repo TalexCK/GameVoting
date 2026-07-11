@@ -5,8 +5,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Model class representing a historical voting session.
- * Used for database storage and retrieval of voting history.
+ * Model class representing a historical voting session. Used for database storage and retrieval of
+ * voting history.
  */
 public class VoteHistory {
 
@@ -19,14 +19,13 @@ public class VoteHistory {
   private final Map<String, Integer> voteDetails; // game_id -> vote_count
 
   public VoteHistory(
-    UUID sessionId,
-    Instant timestamp,
-    String winningGameId,
-    String winningGameName,
-    int totalVotes,
-    int playerCount,
-    Map<String, Integer> voteDetails
-  ) {
+      UUID sessionId,
+      Instant timestamp,
+      String winningGameId,
+      String winningGameName,
+      int totalVotes,
+      int playerCount,
+      Map<String, Integer> voteDetails) {
     this.sessionId = sessionId;
     this.timestamp = timestamp;
     this.winningGameId = winningGameId;
@@ -64,9 +63,7 @@ public class VoteHistory {
     return voteDetails;
   }
 
-  /**
-   * Builder pattern for creating VoteHistory instances.
-   */
+  /** Builder pattern for creating VoteHistory instances. */
   public static class Builder {
 
     private UUID sessionId;
@@ -114,14 +111,13 @@ public class VoteHistory {
 
     public VoteHistory build() {
       return new VoteHistory(
-        sessionId,
-        timestamp,
-        winningGameId,
-        winningGameName,
-        totalVotes,
-        playerCount,
-        voteDetails
-      );
+          sessionId,
+          timestamp,
+          winningGameId,
+          winningGameName,
+          totalVotes,
+          playerCount,
+          voteDetails);
     }
   }
 }

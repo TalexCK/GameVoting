@@ -5,13 +5,12 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public final class LegacyColorUtil {
 
-    private static final LegacyComponentSerializer LEGACY_SERIALIZER =
-        LegacyComponentSerializer.legacyAmpersand();
+  private static final LegacyComponentSerializer LEGACY_SERIALIZER =
+      LegacyComponentSerializer.legacyAmpersand();
 
-    private LegacyColorUtil() {
-    }
+  private LegacyColorUtil() {}
 
-    public static Component colorize(String message) {
-        return LEGACY_SERIALIZER.deserialize(message == null ? "" : message);
-    }
+  public static Component colorize(String message) {
+    return LEGACY_SERIALIZER.deserialize(message == null ? "" : message);
+  }
 }

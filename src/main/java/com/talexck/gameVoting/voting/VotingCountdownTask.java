@@ -10,8 +10,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 /**
- * Task that displays countdown timer via boss bar during voting session.
- * Updates every second with remaining time and progress bar.
+ * Task that displays countdown timer via boss bar during voting session. Updates every second with
+ * remaining time and progress bar.
  */
 public class VotingCountdownTask extends BukkitRunnable {
 
@@ -57,10 +57,8 @@ public class VotingCountdownTask extends BukkitRunnable {
     // Get translated title with placeholder
     Map<String, String> placeholders = new HashMap<>();
     placeholders.put("time", timeStr);
-    String title = LanguageManager.getInstance().getMessage(
-      "voting.countdown_bossbar",
-      placeholders
-    );
+    String title =
+        LanguageManager.getInstance().getMessage("voting.countdown_bossbar", placeholders);
 
     // Update boss bar for all online players
     BossBarManager manager = BossBarManager.getInstance();
@@ -85,9 +83,7 @@ public class VotingCountdownTask extends BukkitRunnable {
     }
   }
 
-  /**
-   * Clean up boss bars for all players.
-   */
+  /** Clean up boss bars for all players. */
   private void cleanup() {
     BossBarManager manager = BossBarManager.getInstance();
     for (Player player : Bukkit.getOnlinePlayers()) {

@@ -1,353 +1,198 @@
 # GameVoting
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Java Version](https://img.shields.io/badge/java-17%2B-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![Paper Version](https://img.shields.io/badge/paper-1.16+-green.svg)](https://papermc.io/)
-[![CloudNet Version](https://img.shields.io/badge/cloudnet-4.0.0--RC10-purple.svg)](https://cloudnetservice.eu/)
+[![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://adoptium.net/)
+[![Paper](https://img.shields.io/badge/Paper-1.21.1-green.svg)](https://papermc.io/)
+[![Storage](https://img.shields.io/badge/storage-PostgreSQL-blue.svg)](https://www.postgresql.org/)
 
-[中文文档](doc/README_zh.md) | [User Guide](doc/USER_GUIDE.md) | [使用文档](doc/USER_GUIDE_zh.md)
+[中文说明](doc/README_zh.md) | [User Guide](doc/USER_GUIDE.md) | [中文使用指南](doc/USER_GUIDE_zh.md)
 
-A powerful and feature-rich Minecraft voting system plugin for Paper servers, designed for CloudNet v4 network environments. Support for automatic game selection, player ready system, holographic displays, and multi-database persistence.
+GameVoting is the lobby voting plugin for the minigames network. It manages voting, readiness, game selection, scheduler-backed server lifecycle, queued player transfers, vote history, holograms, and parties.
 
-## ✨ Features
+The current runtime uses SchedulerBridge for every server operation and PostgreSQL as its only persistence backend.
 
-### 🎮 Voting System
-- **Multi-phase Voting Flow**
-  - Automatic item distribution based on player count (≥6 players)
-  - Pre-voting ready phase with emerald trigger items
-  - Voting phase with compass menu interface
-  - Post-voting ready phase with dye-based ready indicators
-  
-- **Smart Player Ready System**
-  - Players receive emerald items when ≥6 players online
-  - Right-click to mark ready/unready status
-  - Automatic voting start when all players are ready
-  - Real-time hologram updates showing ready count
-  
-- **Flexible Voting Modes**
-  - Manual start: `/vote start [duration]` - Always starts voting immediately
-  - Automatic start: Emerald ready system triggers voting when all players ready
-  - Custom voting duration (default 60 seconds)
+## Runtime architecture
 
-### 📊 Holographic Displays
-- **Dynamic Display States**
-  - Idle: Historical top 10 winning games with vote counts
-  - Pre-voting Ready: Shows ready player count and progress
-  - Voting Active: Current available games with live vote counts
-  - Vote Ended: Top 10 voted games from current session
-  - Post-teleport: Returns to historical top 10
-  
-- **Multi-location Support**
-  - Create holograms at any location with `/vote holograms create`
-  - Automatic synchronization across all hologram locations
-  - List and remove holograms with simple commands
+1. GameVoting obtains the `ServerScheduler` service registered by the Paper SchedulerBridge plugin.
+2. Scheduler reads each `gamevoting` entry from `servers/*.json` and passes the ordered catalog through SchedulerBridge.
+3. When voting ends, GameVoting launches the winning `server-id` while players enter the ready phase.
+4. The child server bridge reports startup and heartbeats to the scheduler. GameVoting polls until the instance state is `READY`.
+5. The SchedulerBridge Velocity plugin registers every ready child server at the scheduler-assigned address.
+6. GameVoting queues the selected player UUIDs for transfer. Velocity executes each connection request and reports the result.
+7. Failed transfers remain queued and are retried by the scheduler. The deployment default is 30 seconds.
+8. A child Bridge resets its idle timer whenever a player joins and asks the scheduler to stop the instance only after five continuous empty minutes.
 
-### 🗄️ Database Integration
-- **Multi-database Support**
-  - PostgreSQL (recommended for production)
-  - MySQL/MariaDB
-  - MongoDB
-  - Optional: Can run without database
-  
-- **Vote History Tracking**
-  - Records winning game, total votes, player count
-  - Stores detailed vote breakdown per game
-  - Timestamp-based historical analytics
-  - Automatic top 10 winner statistics
+GameVoting never chooses a child server port and never edits Velocity's server list directly.
 
-### 🌐 CloudNet Integration
-- **Seamless Service Management**
-  - Automatic CloudNet service detection
-  - Service status-based game filtering
-  - Player teleportation via proxy commands
-  - Only teleports players who actually voted
-  
-- **Service Configuration**
-  - Game-to-service mapping via `games.yml`
-  - Configurable service name patterns
-  - Support for multiple services per game type
+## Features
 
-### 🌍 Internationalization
-- **Multi-language Support**
-  - English (en-US, en-UK)
-  - Simplified Chinese (zh-CN)
-  - Easy to add custom languages
-  
-- **Complete Translation Coverage**
-  - All commands, messages, and UI elements
-  - Item names and lore
-  - Hologram displays
-  - Error messages and feedback
+- Multi-stage voting with lobby-ready, voting, and post-vote ready phases
+- Scheduler-backed launch, status lookup, listing, stop, and transfer operations
+- Exact client-version or client-version-range checks before readying
+- Player-count filtering with `min_player` and `max_player`
+- PostgreSQL vote history with UUID, timestamp, and JSONB vote details
+- Optional DecentHolograms displays
+- Configurable language files, voting items, BossBars, and ActionBars
+- Lobby party management for up to 16 players
+- Separate `/solo` catalog with single-caller shared joins and frozen player-world parties
+- Optional GameVoting Velocity bridge for client-version detection, Scheduler-backed `/game`, and permission-aware `/help`
 
-### 🎯 Advanced Features
-- **Smart Item Management**
-  - Automatic item distribution in slot 9
-  - Different items for different server states
-  - Undropable vote items with persistent data
-  - Color-coded ready status indicators
-  
-- **Party System Integration**
-  - Create and manage player parties
-  - Party-based game teleportation
-  - Party member management
-  
-- **Robust Permission System**
-  - Fine-grained permission control
-  - Admin vs player command separation
-  - Configurable access levels
+## Requirements
 
-## 📋 Requirements
+- Paper 1.21.1 for the current lobby deployment
+- Java 17 or newer; Java 21 is used by the current deployment
+- Paper SchedulerBridge plugin on the lobby server
+- SchedulerBridge plugin on Velocity and every managed child server
+- Running `server-scheduler` with a valid bridge token
+- PostgreSQL database named `gamevoting`
+- ViaVersion and the GameVoting Velocity bridge when client-version validation and its proxy commands are required
+- DecentHolograms 2.8.6 or newer only when holograms are required
 
-- **Server**
-  - Paper 1.16 or higher (Spigot/Bukkit not supported)
-  - Java 17 or higher
-  - CloudNet v4 (4.0.0-RC10 or higher)
-  
-- **Dependencies**
-  - DecentHolograms 2.8.6+ (for hologram displays)
-  - CloudNet Driver & Bridge modules
-  
-- **Optional**
-  - PostgreSQL 12+ / MySQL 8.0+ / MongoDB 5.0+ (for vote history)
+GameVoting disables itself if the Paper SchedulerBridge does not register `ServerScheduler`.
 
-## 🚀 Installation
+## Build
 
-1. **Download the plugin**
-   ```bash
-   # Build from source
-   git clone https://github.com/yourusername/GameVoting.git
-   cd GameVoting
-   mvn clean package
-   ```
+Publish the SchedulerBridge common API to the local Maven repository first:
 
-2. **Install dependencies**
-   - Download and install [DecentHolograms](https://www.spigotmc.org/resources/decentholograms.96927/)
-   - Ensure CloudNet v4 is properly configured
+```bash
+cd ../scheduler-bridge
+gradle :common:publishToMavenLocal
+```
 
-3. **Deploy the plugin**
-   ```bash
-   # Copy the compiled JAR to your plugins folder
-   cp target/GameVoting-1.1.0.jar /path/to/server/plugins/
-   ```
+Build the Paper plugin:
 
-4. **Configure the plugin**
-   - Start the server to generate default configuration files
-   - Edit `plugins/GameVoting/config.yml`
-   - Configure `plugins/GameVoting/games.yml`
-   - Restart the server
+```bash
+cd ../GameVoting
+mvn clean package
+```
 
-## ⚙️ Configuration
+Build the optional GameVoting Velocity bridge:
 
-### config.yml
+```bash
+cd velocity-bridge
+mvn clean package
+```
+
+Artifacts:
+
+- `target/GameVoting-1.1.4.jar`
+- `velocity-bridge/target/gamevoting-velocity-bridge-1.0.0.jar`
+
+## Installation
+
+Install these plugins on the lobby Paper server:
+
+- SchedulerBridge
+- GameVoting
+- DecentHolograms when holograms are enabled
+
+Install these plugins on Velocity:
+
+- SchedulerBridge Velocity plugin
+- ViaVersion
+- GameVoting Velocity bridge when version validation, `/game`, and the GameVoting `/help` output are required
+
+Start the lobby once, then configure:
+
+- `plugins/GameVoting/config.yml`
+- `plugins/GameVoting/lang/*.yml`
+- `plugins/GameVoting/holograms.yml`
+
+In the managed deployment, scheduler file rendering supplies the PostgreSQL connection values from the scheduler's central configuration.
+
+## Main configuration
+
 ```yaml
-# Debug mode for detailed logging
 debug: false
-
-# Language: en-US, en-UK, zh-CN
+game-config-mode: "scheduler"
 language: "en-US"
-
-# CloudNet proxy service name
-proxy-service-name: "Proxy-1"
-
-# Database configuration
+spawnpoint:
+  enable: false
+  x: 0
+  y: 64
+  z: 0
 database:
   enabled: true
-  type: "postgresql"  # postgresql, mysql, mongodb
-  host: "localhost"
+  host: "127.0.0.1"
   port: 5432
   database: "gamevoting"
-  username: "postgres"
-  password: "password"
-
-# Hologram locations (managed via commands)
+  username: "minigames"
+  password: "replace-me"
 holograms:
   locations: []
 ```
 
-### games.yml
-```yaml
-games:
-  - id: "skywars"
-    name: "SkyWars"
-    service-name: "SkyWars-{number}"
-    icon: "GOLDEN_SWORD"
-    description: "Fight in the sky!"
-    
-  - id: "bedwars"
-    name: "BedWars"
-    service-name: "BedWars-{number}"
-    icon: "RED_BED"
-    description: "Protect your bed!"
+PostgreSQL is the only supported persistence backend. The plugin creates the `vote_history` table and its indexes automatically. Setting `database.enabled` to `false` disables history and `/vote session list` while leaving live voting available.
+
+## Scheduler game catalog
+
+The managed deployment enables `game-config-mode: "scheduler"`. In this mode GameVoting never creates or reads `games.yml`. Every votable server owns a `gamevoting` object in `servers/<server-id>.json`:
+
+```json
+{
+  "gamevoting": {
+    "order": 10,
+    "id": "GScard",
+    "name": "&b&lGSkard",
+    "description": [
+      "&7Defeat opponents with cards!"
+    ],
+    "material": "GOLDEN_CARROT",
+    "custom_model_data": 0,
+    "min_version": "1.21.11",
+    "max_version": "26.2",
+    "min_players": 4,
+    "max_players": 50
+  }
+}
 ```
 
-## 📖 Usage
+The Scheduler derives `server-id` from the JSON filename, validates the catalog, and passes it through SchedulerBridge to GameVoting. `order` controls menu order. Both BedWars servers run a strict `1.21.11` core and accept clients from `1.21.11` through `26.2`.
 
-### For Players
+The Velocity bridge also reads this catalog from the Scheduler at startup. `/game <game-id>` therefore displays every voting and Solo definition from `servers/*.json`, including its description, rules, aliases, supported client versions, player range, and game type. The managed Velocity `config.yml` keeps only command help; game content is not duplicated there.
 
-1. **Automatic Voting (≥6 players)**
-   ```
-   - Wait for emerald item in slot 9
-   - Right-click to mark ready
-   - Voting starts when all players ready
-   ```
+Set `solo` to `true` to remove a definition from voting and expose it only through `/solo`. Solo definitions also provide `solo_mode` (`shared` or `player_world`), `solo_startup` (`always` or `on_demand`), `solo_max_players`, and `solo_retention_days`. Definitions with `solo: false` remain exclusive to voting and the normal game list.
 
-2. **Manual Voting**
-   ```
-   - Admin starts: /vote start
-   - Receive compass in slot 9
-   - Right-click to open voting menu
-   - Select your preferred game
-   ```
+`shared` starts or joins one scheduler-managed shared server and submits only the caller. It never captures or freezes a party. Clicking a `player_world` game first queries Scheduler for an existing allocation. Existing members immediately reopen their saved world. A player without a saved world enters a creation menu, may create alone or invite exactly one online lobby player, and can create a duo world only after that player accepts the clickable chat request. The accepted one- or two-player roster is frozen at creation and can be replaced only after `/solo destroy <game-id>` removes the saved world.
 
-3. **Post-voting Ready**
-   ```
-   - Receive gray dye after voting ends
-   - Right-click to mark ready
-   - Changes to lime dye when ready
-   - Game starts when all players ready
-   ```
+The GameVoting Velocity bridge requires ViaVersion and reads ViaVersion's original client protocol and version name before consulting Velocity's protocol value. Velocity is used only when ViaVersion has no player protocol. While the proxy bridge is installed, a lobby cache miss is reported as undetected and triggers a refresh instead of treating Paper's backend protocol as the client version.
 
-### For Administrators
+GameVoting checks scheduler state once per second. As soon as the target enters `READY`, it queues the captured players without a fixed delay. Velocity holds those transfers until ViaVersion has detected the backend protocol, then connects the players immediately.
 
-```bash
-# Start voting manually
-/vote start [duration]
+Stopping or replacing the pending target cancels its readiness poll, so callbacks from an older launch cannot transfer players later.
 
-# Force start game (skip ready phase)
-/vote forcestart
+## Commands
 
-# Cancel active voting
-/vote cancel
+Player-facing commands:
 
-# Reload configuration
-/vote reload
+- `/vote` opens the voting menu during an active vote.
+- `/vote start [minutes]` starts a vote immediately. The default is one minute; values such as `0.5` and `0.5min` are accepted.
+- `/vote ready` marks the player ready after client-version validation.
+- `/vote gamestart` lets the vote starter continue from the ready phase.
+- `/vote join [game-id]` queues a transfer to the current or selected ready server.
+- `/vote session list [page]` shows stored voting sessions.
+- `/solo` opens the solo-only catalog.
+- `/solo start <game-id>` opens an existing player world or starts the creation flow; shared games launch immediately.
+- `/solo destroy <game-id>` destroys the caller's `player_world` allocation so it can be recreated with a new frozen list.
 
-# Hologram management
-/vote holograms create        # Create at current location
-/vote holograms list          # List all holograms
-/vote holograms remove <id>   # Remove specific hologram
+Players also receive a fixed Glowstone Dust item in hotbar slot 6. It cannot be moved or dropped, and right-clicking it opens the same Solo catalog as `/solo`.
 
-# Join game service
-/vote join <service>
+Administrative commands:
 
-# Party commands
-/party create              # Create a party
-/party invite <player>     # Invite a player
-/party join <player>       # Join a party
-/party leave              # Leave current party
-/party disband            # Disband your party
-```
+- `/vote stop`
+- `/vote forcestart <game-id>`
+- `/vote stopgame <service-id>` stops one active Scheduler service; tab completion only lists online IDs such as `Backstabbed-1`.
+- `/vote gamelist`
+- `/vote session stop`
+- `/vote reload`
+- `/vote holograms create`
+- `/vote holograms list`
+- `/vote holograms remove <id>`
+- `/vote lock <player>`
+- `/vote unlock <player>`
 
-## 🔌 API Usage
+See the [User Guide](doc/USER_GUIDE.md) for permissions, all current scheduler IDs, transfer behavior, Velocity responsibilities, and troubleshooting.
 
-### For Developers
+## License
 
-```java
-// Get voting session
-VotingSession session = VotingSession.getInstance();
-
-// Check voting state
-boolean isVoting = session.isVotingInProgress();
-boolean isReady = session.isReadyPhaseActive();
-
-// Get vote counts
-Map<String, Integer> votes = session.getVoteCounts();
-
-// Access database
-VoteHistoryRepository repo = DatabaseManager.getInstance()
-    .getVoteHistoryRepository();
-List<VoteHistory> history = repo.getTopWinningGames(10);
-
-// Hologram management
-HologramManager manager = plugin.getHologramManager();
-manager.updateAllDisplays(DisplayState.VOTING_ACTIVE);
-```
-
-## 🏗️ Project Structure
-
-```
-GameVoting/
-├── src/main/java/com/talexck/gameVoting/
-│   ├── GameVoting.java              # Main plugin class
-│   ├── commands/                     # Command handlers
-│   │   ├── VoteCommand.java         # Voting commands
-│   │   └── PartyCommand.java        # Party commands
-│   ├── config/                       # Configuration management
-│   │   ├── GameConfig.java          # Game configuration
-│   │   └── ConfigLoader.java        # Config loader
-│   ├── voting/                       # Voting system
-│   │   └── VotingSession.java       # Vote session manager
-│   ├── database/                     # Database layer
-│   │   ├── DatabaseManager.java     # Database connections
-│   │   ├── models/                  # Data models
-│   │   └── repositories/            # Data repositories
-│   ├── hologram/                     # Hologram displays
-│   │   ├── HologramManager.java     # Hologram manager
-│   │   └── HologramDisplayManager.java
-│   ├── listeners/                    # Event listeners
-│   │   ├── VoteItemListener.java    # Vote item interactions
-│   │   ├── PlayerJoinListener.java  # Player join events
-│   │   └── VotingPlayerQuitListener.java
-│   ├── cloudnet/                     # CloudNet integration
-│   │   └── CloudNetAPI.java         # CloudNet API wrapper
-│   ├── party/                        # Party system
-│   │   └── PartyManager.java        # Party management
-│   └── utils/                        # Utility classes
-│       ├── item/VoteItem.java       # Vote item management
-│       ├── MessageUtil.java         # Message utilities
-│       └── ActionBarUtil.java       # ActionBar utilities
-├── src/main/resources/
-│   ├── plugin.yml                    # Plugin metadata
-│   ├── config.yml                    # Default config
-│   ├── games.yml                     # Game definitions
-│   └── lang/                         # Language files
-│       ├── en-US.yml
-│       ├── en-UK.yml
-│       └── zh-CN.yml
-└── pom.xml                           # Maven configuration
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [PaperMC](https://papermc.io/) - High-performance Minecraft server
-- [CloudNet](https://cloudnetservice.eu/) - Minecraft cloud system
-- [DecentHolograms](https://github.com/DecentSoftware-eu/DecentHolograms) - Hologram API
-- All contributors and users of this plugin
-
-## 📧 Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/GameVoting/issues)
-- **Documentation**: [User Guide](doc/USER_GUIDE.md)
-- **Chinese Documentation**: [使用文档](doc/USER_GUIDE_zh.md)
-
-## 🔄 Version History
-
-### v1.1.0
-- Added pre-voting ready system with emerald triggers
-- Implemented post-voting ready phase with dye indicators
-- Added player count-based item distribution
-- Enhanced hologram display states
-- Improved CloudNet integration
-- Added vote history database tracking
-- Teleport filtering for voted players only
-
-### v1.0.0
-- Initial release
-- Basic voting system
-- CloudNet service integration
-- Hologram displays
-- Multi-language support
+Licensed under the [MIT License](LICENSE).
